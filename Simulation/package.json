@@ -1,0 +1,12 @@
+{
+  "name": "smarter-bicycle-mobility-simulator",
+  "version": "1.0.0",
+  "description": "MQTT bicycle sensor simulator for the Smarter Bicycle Mobility in Genoa Node-RED project",
+  "main": "bikeSimulator.js",
+  "scripts": {
+    "start": "node bikeSimulator.js"
+  },
+  "dependencies": {
+    "mqtt": "^5.10.3"
+  }
+}

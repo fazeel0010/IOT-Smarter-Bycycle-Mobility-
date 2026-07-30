@@ -1,0 +1,1190 @@
+[
+  {
+    "id": "f2aa8b217634494c",
+    "type": "tab",
+    "label": "Smarter Bicycle Mobility - Genoa",
+    "disabled": false,
+    "info": "IoT prototype with MQTT, hot path, CSV historical storage, analytics and dashboard.",
+    "env": []
+  },
+  {
+    "id": "0fe71facd770409c",
+    "type": "mqtt-broker",
+    "name": "Local Mosquitto",
+    "broker": "localhost",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true
+  },
+  {
+    "id": "2cc61340aadf433e",
+    "type": "ui_tab",
+    "name": "Live Monitoring",
+    "icon": "directions_bike",
+    "order": 1,
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "cf64f95943c64109",
+    "type": "ui_tab",
+    "name": "Historical Analytics",
+    "icon": "timeline",
+    "order": 2,
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "8f8a663d04fc44e8",
+    "type": "ui_group",
+    "name": "Live Bicycle Data",
+    "tab": "2cc61340aadf433e",
+    "order": 1,
+    "disp": true,
+    "width": "24",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "0ff8acf7a37e40a1",
+    "type": "ui_group",
+    "name": "Device Status",
+    "tab": "2cc61340aadf433e",
+    "order": 2,
+    "disp": true,
+    "width": "24",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "48b54734aec64996",
+    "type": "ui_group",
+    "name": "Events and Alarms",
+    "tab": "2cc61340aadf433e",
+    "order": 3,
+    "disp": true,
+    "width": "24",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "46b268098d2d4151",
+    "type": "ui_group",
+    "name": "Historical Mobility Analytics",
+    "tab": "cf64f95943c64109",
+    "order": 1,
+    "disp": true,
+    "width": "24",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "3c5459dd753e4a70",
+    "type": "ui_dropdown",
+    "z": "f2aa8b217634494c",
+    "name": "Select Bicycle",
+    "label": "Select Bicycle",
+    "tooltip": "",
+    "place": "Select Bicycle",
+    "group": "8f8a663d04fc44e8",
+    "order": 1,
+    "width": 6,
+    "height": 1,
+    "passthru": true,
+    "multiple": false,
+    "options": [
+      {
+        "label": "All bicycles",
+        "value": "all",
+        "type": "str"
+      },
+      {
+        "label": "Bike 1",
+        "value": "bike_1",
+        "type": "str"
+      },
+      {
+        "label": "Bike 2",
+        "value": "bike_2",
+        "type": "str"
+      },
+      {
+        "label": "Bike 3",
+        "value": "bike_3",
+        "type": "str"
+      }
+    ],
+    "payload": "",
+    "topic": "payload",
+    "topicType": "msg",
+    "className": "",
+    "x": 180,
+    "y": 120,
+    "wires": [
+      [
+        "dda8e6ac54e545bc"
+      ]
+    ]
+  },
+  {
+    "id": "dda8e6ac54e545bc",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Save selected bicycle",
+    "func": "var bike = msg.payload || \"all\";\nglobal.set(\"selectedBike\", bike);\nmsg.payload = bike === \"all\" ? \"All bicycles\" : bike.replace(\"_\", \" \").toUpperCase();\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "global.set(\"selectedBike\", global.get(\"selectedBike\") || \"all\");",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 120,
+    "wires": [
+      [
+        "55d1d0b5dd464706"
+      ]
+    ]
+  },
+  {
+    "id": "55d1d0b5dd464706",
+    "type": "ui_text",
+    "z": "f2aa8b217634494c",
+    "group": "8f8a663d04fc44e8",
+    "order": 2,
+    "width": 6,
+    "height": 1,
+    "name": "Selected bicycle",
+    "label": "Monitoring",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "x": 680,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "e142b7eddba445d8",
+    "type": "mqtt in",
+    "z": "f2aa8b217634494c",
+    "name": "Bicycle sensor stream",
+    "topic": "bike/sensors",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "0fe71facd770409c",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 180,
+    "y": 240,
+    "wires": [
+      [
+        "161313700ed14fb6"
+      ]
+    ]
+  },
+  {
+    "id": "161313700ed14fb6",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Normalize sensor message",
+    "func": "\nvar p = msg.payload;\nif (typeof p === \"string\") {\n    try { p = JSON.parse(p); } catch(e) { node.warn(\"Invalid JSON\"); return null; }\n}\nif (!p || typeof p !== \"object\") return null;\n\np.bike_id = p.bike_id || p.sensor_team || p.sensor_id;\nif (!p.bike_id) return null;\np.sensor_type = p.sensor_type || p.type;\np.timestamp = p.timestamp || new Date().toISOString();\np.timestampRegular = Number(p.timestampRegular || Date.now());\np.data = p.data || {};\nmsg.payload = p;\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 240,
+    "wires": [
+      [
+        "d3e543fcb2874adc",
+        "4da9c7c1a4a64460"
+      ]
+    ]
+  },
+  {
+    "id": "d3e543fcb2874adc",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Hot Path: process live bicycle data",
+    "func": "\nvar p = msg.payload;\nvar bike = p.bike_id;\nvar selected = global.get(\"selectedBike\") || \"all\";\nvar states = flow.get(\"bikeStates\") || {};\nvar s = states[bike] || {\n    speed:0,battery:100,latitude:null,longitude:null,altitude:0,\n    acceleration:0,parkingStatus:\"Moving\",locked:false,tripCount:0,\n    totalDistanceKm:0,lastSeen:0,lastLat:null,lastLon:null,parkingSince:null,\n    gnssQuality:\"Unknown\",satellites:0,hdop:null,deviceHealth:\"Healthy\",\n    sensors:{position:false,speed:false,battery:false,acceleration:false,parking:false}\n};\n\nfunction rad(v){ return v*Math.PI/180; }\nfunction hav(lat1,lon1,lat2,lon2){\n    var R=6371000,dLat=rad(lat2-lat1),dLon=rad(lon2-lon1);\n    var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2);\n    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));\n}\nfunction inZone(lat,lon,z){\n    return hav(lat,lon,z.lat,z.lon) <= z.radius;\n}\nvar parkingZones = [\n    {name:\"Brignole Station\",lat:44.4067,lon:8.9473,radius:180},\n    {name:\"Piazza De Ferrari\",lat:44.4072,lon:8.9339,radius:180},\n    {name:\"Porto Antico\",lat:44.4103,lon:8.9266,radius:220}\n];\nvar restrictedZones = [\n    {name:\"Restricted pedestrian zone\",lat:44.4084,lon:8.9322,radius:90}\n];\n\ns.lastSeen = Date.now();\nvar alerts = [];\nvar wasMoving = s.speed > 2;\n\nif (p.sensor_type === \"position\") {\n    var lat = Number(p.data.latitude), lon = Number(p.data.longitude);\n    if (!isNaN(lat) && !isNaN(lon)) {\n        if (s.lastLat !== null && s.lastLon !== null) {\n            var step = hav(s.lastLat,s.lastLon,lat,lon);\n            if (step < 1000) s.totalDistanceKm += step/1000;\n            if (s.locked && step > 20) alerts.push(\"Possible theft or unauthorized movement: \" + bike);\n        }\n        s.latitude=lat; s.longitude=lon; s.lastLat=lat; s.lastLon=lon;\n    }\n    s.altitude = Number(p.data.altitude || s.altitude || 0);\n    s.gnssQuality = p.data.gnss_quality || p.data.gnssQuality || s.gnssQuality;\n    s.satellites = Number(p.data.satellites || s.satellites || 0);\n    s.hdop = p.data.hdop !== undefined ? Number(p.data.hdop) : s.hdop;\n    s.sensors.position = true;\n\n    if (Number(p.data.tilt_angle || 0) > 60) alerts.push(\"Possible fall or incorrect parking: \" + bike);\n    restrictedZones.forEach(function(z){\n        if (inZone(lat,lon,z)) alerts.push(bike + \" entered \" + z.name);\n    });\n}\nif (p.sensor_type === \"speed\") {\n    s.speed = Number(p.data.speed || 0);\n    s.sensors.speed = true;\n    if (!wasMoving && s.speed > 2) s.tripCount += 1;\n    if (s.speed > 35) alerts.push(\"Dangerous speed detected: \" + bike);\n}\nif (p.sensor_type === \"battery\") {\n    s.battery = Number(p.data.battery !== undefined ? p.data.battery : p.data.level);\n    s.sensors.battery = true;\n    if (s.battery <= 20) alerts.push(\"Low battery: \" + bike + \" (\" + s.battery + \"%)\");\n}\nif (p.sensor_type === \"acceleration\") {\n    var a = p.data.acceleration;\n    if (a === undefined && p.data.x !== undefined) {\n        var x=Number(p.data.x||0),y=Number(p.data.y||0),z=Number(p.data.z||0);\n        a=Math.sqrt(x*x+y*y+z*z);\n    }\n    s.acceleration = Number(a || 0);\n    s.sensors.acceleration = true;\n    if (Number(p.data.x || s.acceleration) >= 2.5) alerts.push(\"Harsh acceleration: \" + bike);\n    if (Number(p.data.x || 0) <= -2.5) alerts.push(\"Harsh braking: \" + bike);\n    if (Number(p.data.vibration || 0) > 8) alerts.push(\"Abnormal vibration: \" + bike);\n}\nif (p.sensor_type === \"parking\") {\n    s.parkingStatus = p.data.status || p.data.parking_status || \"Moving\";\n    s.locked = Boolean(p.data.locked);\n    s.sensors.parking = true;\n    if (String(s.parkingStatus).toLowerCase() === \"parked\") {\n        if (!s.parkingSince) s.parkingSince = Date.now();\n        if (s.latitude !== null) {\n            var authorized = parkingZones.some(function(z){return inZone(s.latitude,s.longitude,z);});\n            if (!authorized) alerts.push(\"Parking violation outside authorized zone: \" + bike);\n        }\n    } else {\n        s.parkingSince = null;\n    }\n}\nif (p.sensor_type === \"device_status\") {\n    s.deviceHealth = p.data.device_health || p.data.health || s.deviceHealth;\n    if (p.data.sensor_availability) s.sensors = Object.assign(s.sensors,p.data.sensor_availability);\n    if (s.deviceHealth !== \"Healthy\") alerts.push(\"Device health warning: \" + bike);\n}\n\nstates[bike]=s;\nflow.set(\"bikeStates\",states);\n\nvar visible = selected === \"all\" || selected === bike;\nvar speedOut=null,batteryOut=null,mapOut=null,statusOut=null,alertOut=null,distanceOut=null,accelOut=null,parkingOut=null;\n\nif (selected === \"all\") {\n    var keys=Object.keys(states),count=keys.length||1;\n    var sp=0,bt=0,dist=0,acc=0;\n    keys.forEach(function(k){sp+=Number(states[k].speed||0);bt+=Number(states[k].battery||0);dist+=Number(states[k].totalDistanceKm||0);acc+=Number(states[k].acceleration||0);});\n    speedOut={payload:(sp/count).toFixed(2)};\n    batteryOut={payload:(bt/count).toFixed(1)};\n    distanceOut={payload:dist.toFixed(2)};\n    accelOut={payload:(acc/count).toFixed(2)};\n} else if (visible) {\n    speedOut={payload:s.speed};\n    batteryOut={payload:s.battery};\n    distanceOut={payload:s.totalDistanceKm.toFixed(2)};\n    accelOut={payload:s.acceleration.toFixed(2)};\n}\nif (visible && p.sensor_type === \"position\" && s.latitude !== null) {\n    mapOut={payload:{name:bike,lat:s.latitude,lon:s.longitude,icon:\"bicycle\",layer:\"Bicycles\",\n        popup:\"<b>\"+bike+\"</b><br>Speed: \"+s.speed+\" km/h<br>Battery: \"+s.battery+\"%<br>Altitude: \"+s.altitude+\" m\"}};\n}\nif (visible) {\n    var parkingDuration = s.parkingSince ? Math.floor((Date.now()-s.parkingSince)/1000) : 0;\n    statusOut={payload:{\n        bike: selected===\"all\" ? \"Fleet\" : bike,\n        connectivity:\"Online\",\n        lastSeen:new Date(s.lastSeen).toLocaleString(),\n        gnssQuality:s.gnssQuality,\n        satellites:s.satellites,\n        hdop:s.hdop,\n        altitude:s.altitude,\n        deviceHealth:s.deviceHealth,\n        sensors:s.sensors,\n        trips:s.tripCount,\n        parkingDuration:parkingDuration\n    }};\n    parkingOut={payload:s.parkingStatus};\n}\nif (alerts.length) alertOut={payload:alerts.join(\" | \")};\nreturn [speedOut,batteryOut,mapOut,statusOut,alertOut,distanceOut,accelOut,parkingOut];\n",
+    "outputs": 8,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 720,
+    "y": 240,
+    "wires": [
+      [
+        "24444317d5994286"
+      ],
+      [
+        "28a3091076f449ed"
+      ],
+      [
+        "6d20f22337534d6e"
+      ],
+      [
+        "0c2977ac63e941ce"
+      ],
+      [
+        "0432cc10cbe04757"
+      ],
+      [
+        "ba316ed222d443d7"
+      ],
+      [
+        "8012269cc93a455d"
+      ],
+      [
+        "c13e7ecb385a4796"
+      ]
+    ]
+  },
+  {
+    "id": "24444317d5994286",
+    "type": "ui_gauge",
+    "z": "f2aa8b217634494c",
+    "name": "Current / Fleet speed",
+    "group": "8f8a663d04fc44e8",
+    "order": 3,
+    "width": 6,
+    "height": 4,
+    "gtype": "gage",
+    "title": "Speed",
+    "label": "km/h",
+    "format": "{{value}}",
+    "min": 0,
+    "max": "45",
+    "colors": [
+      "#00b500",
+      "#e6e600",
+      "#ca3838"
+    ],
+    "seg1": "20",
+    "seg2": "35",
+    "diff": false,
+    "className": "",
+    "x": 1090,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "28a3091076f449ed",
+    "type": "ui_gauge",
+    "z": "f2aa8b217634494c",
+    "name": "Battery",
+    "group": "8f8a663d04fc44e8",
+    "order": 4,
+    "width": 6,
+    "height": 4,
+    "gtype": "gage",
+    "title": "Battery",
+    "label": "%",
+    "format": "{{value}}",
+    "min": 0,
+    "max": "100",
+    "colors": [
+      "#ca3838",
+      "#e6e600",
+      "#00b500"
+    ],
+    "seg1": "20",
+    "seg2": "50",
+    "diff": false,
+    "className": "",
+    "x": 1060,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "6d20f22337534d6e",
+    "type": "ui_worldmap",
+    "z": "f2aa8b217634494c",
+    "group": "8f8a663d04fc44e8",
+    "order": 7,
+    "width": 24,
+    "height": 8,
+    "name": "Live Genoa bicycle map",
+    "lat": "44.4056",
+    "lon": "8.9463",
+    "zoom": "13",
+    "layer": "OSMG",
+    "cluster": "",
+    "maxage": "",
+    "usermenu": "hide",
+    "layers": "hide",
+    "panit": "false",
+    "panlock": "false",
+    "zoomlock": "false",
+    "hiderightclick": "true",
+    "coords": "none",
+    "showgrid": "false",
+    "showruler": "false",
+    "allowFileDrop": "false",
+    "path": "/worldmap",
+    "overlist": "DR,CO,RA,DN,HM",
+    "maplist": "OSMG,OSMC,EsriC,EsriS,EsriT,EsriDG,UKOS",
+    "mapname": "",
+    "mapurl": "",
+    "mapopt": "",
+    "mapwms": false,
+    "x": 1100,
+    "y": 280,
+    "wires": []
+  },
+  {
+    "id": "ba316ed222d443d7",
+    "type": "ui_text",
+    "z": "f2aa8b217634494c",
+    "group": "8f8a663d04fc44e8",
+    "order": 5,
+    "width": 6,
+    "height": 1,
+    "name": "Distance",
+    "label": "Total distance",
+    "format": "{{msg.payload}} km",
+    "layout": "row-spread",
+    "className": "",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "x": 1070,
+    "y": 340,
+    "wires": []
+  },
+  {
+    "id": "8012269cc93a455d",
+    "type": "ui_text",
+    "z": "f2aa8b217634494c",
+    "group": "8f8a663d04fc44e8",
+    "order": 6,
+    "width": 6,
+    "height": 1,
+    "name": "Acceleration",
+    "label": "Acceleration",
+    "format": "{{msg.payload}} m/s\u00b2",
+    "layout": "row-spread",
+    "className": "",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "x": 1070,
+    "y": 400,
+    "wires": []
+  },
+  {
+    "id": "c13e7ecb385a4796",
+    "type": "ui_text",
+    "z": "f2aa8b217634494c",
+    "group": "8f8a663d04fc44e8",
+    "order": 8,
+    "width": 6,
+    "height": 1,
+    "name": "Parking status",
+    "label": "Parking",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "x": 1070,
+    "y": 460,
+    "wires": []
+  },
+  {
+    "id": "0c2977ac63e941ce",
+    "type": "ui_template",
+    "z": "f2aa8b217634494c",
+    "group": "0ff8acf7a37e40a1",
+    "name": "Device status template",
+    "order": 1,
+    "width": 24,
+    "height": 5,
+    "format": "\n<div style=\"padding:8px\">\n<h3>{{msg.payload.bike}} Device Status</h3>\n<table style=\"width:100%;border-collapse:collapse\">\n<tr><td><b>Connectivity</b></td><td>{{msg.payload.connectivity}}</td></tr>\n<tr><td><b>Last seen</b></td><td>{{msg.payload.lastSeen}}</td></tr>\n<tr><td><b>GNSS quality</b></td><td>{{msg.payload.gnssQuality}}</td></tr>\n<tr><td><b>Satellites / HDOP</b></td><td>{{msg.payload.satellites}} / {{msg.payload.hdop}}</td></tr>\n<tr><td><b>Altitude</b></td><td>{{msg.payload.altitude}} m</td></tr>\n<tr><td><b>Device health</b></td><td>{{msg.payload.deviceHealth}}</td></tr>\n<tr><td><b>Trips</b></td><td>{{msg.payload.trips}}</td></tr>\n<tr><td><b>Parking duration</b></td><td>{{msg.payload.parkingDuration}} s</td></tr>\n<tr><td><b>Sensors</b></td><td>GPS: {{msg.payload.sensors.position}}, Speed: {{msg.payload.sensors.speed}}, Battery: {{msg.payload.sensors.battery}}, IMU: {{msg.payload.sensors.acceleration}}, Parking: {{msg.payload.sensors.parking}}</td></tr>\n</table>\n</div>\n",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1110,
+    "y": 520,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "0432cc10cbe04757",
+    "type": "ui_text",
+    "z": "f2aa8b217634494c",
+    "group": "48b54734aec64996",
+    "order": 1,
+    "width": 24,
+    "height": 2,
+    "name": "Live alarms",
+    "label": "Latest alarm",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "className": "",
+    "style": false,
+    "font": "",
+    "fontSize": 18,
+    "color": "#000000",
+    "x": 1080,
+    "y": 580,
+    "wires": []
+  },
+  {
+    "id": "fb43996e6b344622",
+    "type": "inject",
+    "z": "f2aa8b217634494c",
+    "name": "Check connectivity every 5 s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "5",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 220,
+    "y": 360,
+    "wires": [
+      [
+        "00f37adcdda84b9d"
+      ]
+    ]
+  },
+  {
+    "id": "00f37adcdda84b9d",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Detect offline bicycles",
+    "func": "\nvar states=flow.get(\"bikeStates\")||{};\nvar selected=global.get(\"selectedBike\")||\"all\";\nvar now=Date.now(), offline=[];\nObject.keys(states).forEach(function(k){\n    if(now-Number(states[k].lastSeen||0)>15000) offline.push(k);\n});\nif(!offline.length) return null;\nif(selected===\"all\" || offline.indexOf(selected)>=0){\n    msg.payload=\"Connectivity alert: \"+offline.join(\", \")+\" offline\";\n    return msg;\n}\nreturn null;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 510,
+    "y": 360,
+    "wires": [
+      [
+        "0432cc10cbe04757"
+      ]
+    ]
+  },
+  {
+    "id": "4da9c7c1a4a64460",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Cold Path: prepare CSV records",
+    "func": "\nvar p=msg.payload,b=p.bike_id,t=p.timestamp, d=p.data||{};\nvar base=\"./bicycle_data/\";\nfunction out(file,header,row){ return {filename:base+file,payload:header+\"\\n\"+row}; }\nswitch(p.sensor_type){\ncase \"speed\":\n return [out(\"speed_data.csv\",\"timestamp,bike,speed\",`${t},${b},${Number(d.speed||0)}`),null,null,null,null];\ncase \"battery\":\n return [null,out(\"battery_data.csv\",\"timestamp,bike,battery\",`${t},${b},${Number(d.battery!==undefined?d.battery:d.level||0)}`),null,null,null];\ncase \"position\":\n return [null,null,out(\"gps_data.csv\",\"timestamp,bike,latitude,longitude,altitude,gnss_quality,satellites,hdop\",`${t},${b},${d.latitude},${d.longitude},${Number(d.altitude||0)},${d.gnss_quality||d.gnssQuality||\"Unknown\"},${Number(d.satellites||0)},${d.hdop!==undefined?d.hdop:\"\"}`),null,null];\ncase \"acceleration\":\n return [null,null,null,out(\"acceleration_data.csv\",\"timestamp,bike,x,y,z,vibration,tilt_angle\",`${t},${b},${Number(d.x||0)},${Number(d.y||0)},${Number(d.z||0)},${Number(d.vibration||0)},${Number(d.tilt_angle||0)}`),null];\ncase \"parking\":\n return [null,null,null,null,out(\"parking_data.csv\",\"timestamp,bike,status,locked\",`${t},${b},${d.status||d.parking_status||\"Moving\"},${Boolean(d.locked)}`)];\ndefault:return null;\n}\n",
+    "outputs": 5,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 700,
+    "y": 680,
+    "wires": [
+      [
+        "0b20cce40afb46fc"
+      ],
+      [
+        "5207ddee5b544730"
+      ],
+      [
+        "5df9cebc1cf4454b"
+      ],
+      [
+        "f0439279b5f94fbb"
+      ],
+      [
+        "cb0a5011175d4b80"
+      ]
+    ]
+  },
+  {
+    "id": "0b20cce40afb46fc",
+    "type": "file",
+    "z": "f2aa8b217634494c",
+    "name": "Write speed CSV",
+    "filename": "filename",
+    "filenameType": "msg",
+    "appendNewline": true,
+    "createDir": true,
+    "overwriteFile": "false",
+    "encoding": "utf8",
+    "x": 1060,
+    "y": 640,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "5207ddee5b544730",
+    "type": "file",
+    "z": "f2aa8b217634494c",
+    "name": "Write battery CSV",
+    "filename": "filename",
+    "filenameType": "msg",
+    "appendNewline": true,
+    "createDir": true,
+    "overwriteFile": "false",
+    "encoding": "utf8",
+    "x": 1060,
+    "y": 680,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "5df9cebc1cf4454b",
+    "type": "file",
+    "z": "f2aa8b217634494c",
+    "name": "Write GPS CSV",
+    "filename": "filename",
+    "filenameType": "msg",
+    "appendNewline": true,
+    "createDir": true,
+    "overwriteFile": "false",
+    "encoding": "utf8",
+    "x": 1060,
+    "y": 720,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "f0439279b5f94fbb",
+    "type": "file",
+    "z": "f2aa8b217634494c",
+    "name": "Write acceleration CSV",
+    "filename": "filename",
+    "filenameType": "msg",
+    "appendNewline": true,
+    "createDir": true,
+    "overwriteFile": "false",
+    "encoding": "utf8",
+    "x": 1060,
+    "y": 760,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cb0a5011175d4b80",
+    "type": "file",
+    "z": "f2aa8b217634494c",
+    "name": "Write parking CSV",
+    "filename": "filename",
+    "filenameType": "msg",
+    "appendNewline": true,
+    "createDir": true,
+    "overwriteFile": "false",
+    "encoding": "utf8",
+    "x": 1060,
+    "y": 800,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cfbb851c34b44983",
+    "type": "inject",
+    "z": "f2aa8b217634494c",
+    "name": "Refresh historical analytics",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "3600",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 3,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 220,
+    "y": 900,
+    "wires": [
+      [
+        "b665abed2fce4113",
+        "834401ddb33f43b8",
+        "a8c7c23e64814081",
+        "cd5093c8cc344340",
+        "589c90cd513b4517"
+      ]
+    ]
+  },
+  {
+    "id": "b665abed2fce4113",
+    "type": "file in",
+    "z": "f2aa8b217634494c",
+    "name": "Read speed history",
+    "filename": "./bicycle_data/speed_data.csv",
+    "filenameType": "str",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": false,
+    "encoding": "utf8",
+    "allProps": false,
+    "x": 500,
+    "y": 820,
+    "wires": [
+      [
+        "014ccf60ab214bdb"
+      ]
+    ]
+  },
+  {
+    "id": "834401ddb33f43b8",
+    "type": "file in",
+    "z": "f2aa8b217634494c",
+    "name": "Read battery history",
+    "filename": "./bicycle_data/battery_data.csv",
+    "filenameType": "str",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": false,
+    "encoding": "utf8",
+    "allProps": false,
+    "x": 500,
+    "y": 900,
+    "wires": [
+      [
+        "47a4df7ada4044c8"
+      ]
+    ]
+  },
+  {
+    "id": "a8c7c23e64814081",
+    "type": "file in",
+    "z": "f2aa8b217634494c",
+    "name": "Read GPS history",
+    "filename": "./bicycle_data/gps_data.csv",
+    "filenameType": "str",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": false,
+    "encoding": "utf8",
+    "allProps": false,
+    "x": 500,
+    "y": 980,
+    "wires": [
+      [
+        "78f59afc68d84fbf"
+      ]
+    ]
+  },
+  {
+    "id": "cd5093c8cc344340",
+    "type": "file in",
+    "z": "f2aa8b217634494c",
+    "name": "Read acceleration history",
+    "filename": "./bicycle_data/acceleration_data.csv",
+    "filenameType": "str",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": false,
+    "encoding": "utf8",
+    "allProps": false,
+    "x": 500,
+    "y": 1060,
+    "wires": [
+      [
+        "020e3002df214084"
+      ]
+    ]
+  },
+  {
+    "id": "589c90cd513b4517",
+    "type": "file in",
+    "z": "f2aa8b217634494c",
+    "name": "Read parking history",
+    "filename": "./bicycle_data/parking_data.csv",
+    "filenameType": "str",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": false,
+    "encoding": "utf8",
+    "allProps": false,
+    "x": 500,
+    "y": 1140,
+    "wires": [
+      [
+        "d6b9bba3212941e8"
+      ]
+    ]
+  },
+  {
+    "id": "014ccf60ab214bdb",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Parse speed CSV",
+    "func": "\nvar text=String(msg.payload||\"\").trim();\nif(!text){msg.payload=[];return msg;}\nvar lines=text.split(/\\r?\\n/), cols=[\"timestamp\", \"bike\", \"speed\"], nums=[\"speed\"];\nvar selected=global.get(\"selectedBike\")||\"all\", out=[];\nfor(var i=0;i<lines.length;i++){\n var v=lines[i].split(\",\");\n if(v[0]===\"timestamp\" || v.length<cols.length) continue;\n var o={};\n cols.forEach(function(c,j){o[c]=nums.indexOf(c)>=0?Number(v[j]):v[j];});\n if(selected===\"all\"||o.bike===selected) out.push(o);\n}\nmsg.payload=out; return msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 760,
+    "y": 820,
+    "wires": [
+      [
+        "7cfe638d5c9e464b",
+        "27dea66bac4a4f4d"
+      ]
+    ]
+  },
+  {
+    "id": "47a4df7ada4044c8",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Parse battery CSV",
+    "func": "\nvar text=String(msg.payload||\"\").trim();\nif(!text){msg.payload=[];return msg;}\nvar lines=text.split(/\\r?\\n/), cols=[\"timestamp\", \"bike\", \"battery\"], nums=[\"battery\"];\nvar selected=global.get(\"selectedBike\")||\"all\", out=[];\nfor(var i=0;i<lines.length;i++){\n var v=lines[i].split(\",\");\n if(v[0]===\"timestamp\" || v.length<cols.length) continue;\n var o={};\n cols.forEach(function(c,j){o[c]=nums.indexOf(c)>=0?Number(v[j]):v[j];});\n if(selected===\"all\"||o.bike===selected) out.push(o);\n}\nmsg.payload=out; return msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 760,
+    "y": 900,
+    "wires": [
+      [
+        "6917b5fc90684ade",
+        "91f0ac63abe9474f"
+      ]
+    ]
+  },
+  {
+    "id": "78f59afc68d84fbf",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Parse GPS CSV",
+    "func": "\nvar text=String(msg.payload||\"\").trim();\nif(!text){msg.payload=[];return msg;}\nvar lines=text.split(/\\r?\\n/), cols=[\"timestamp\", \"bike\", \"latitude\", \"longitude\", \"altitude\", \"gnss_quality\", \"satellites\", \"hdop\"], nums=[\"latitude\", \"longitude\", \"altitude\", \"satellites\", \"hdop\"];\nvar selected=global.get(\"selectedBike\")||\"all\", out=[];\nfor(var i=0;i<lines.length;i++){\n var v=lines[i].split(\",\");\n if(v[0]===\"timestamp\" || v.length<cols.length) continue;\n var o={};\n cols.forEach(function(c,j){o[c]=nums.indexOf(c)>=0?Number(v[j]):v[j];});\n if(selected===\"all\"||o.bike===selected) out.push(o);\n}\nmsg.payload=out; return msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 760,
+    "y": 980,
+    "wires": [
+      [
+        "881ea9b963a047b3"
+      ]
+    ]
+  },
+  {
+    "id": "020e3002df214084",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Parse acceleration CSV",
+    "func": "\nvar text=String(msg.payload||\"\").trim();\nif(!text){msg.payload=[];return msg;}\nvar lines=text.split(/\\r?\\n/), cols=[\"timestamp\", \"bike\", \"x\", \"y\", \"z\", \"vibration\", \"tilt_angle\"], nums=[\"x\", \"y\", \"z\", \"vibration\", \"tilt_angle\"];\nvar selected=global.get(\"selectedBike\")||\"all\", out=[];\nfor(var i=0;i<lines.length;i++){\n var v=lines[i].split(\",\");\n if(v[0]===\"timestamp\" || v.length<cols.length) continue;\n var o={};\n cols.forEach(function(c,j){o[c]=nums.indexOf(c)>=0?Number(v[j]):v[j];});\n if(selected===\"all\"||o.bike===selected) out.push(o);\n}\nmsg.payload=out; return msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 780,
+    "y": 1060,
+    "wires": [
+      [
+        "5cec6d913ced4053"
+      ]
+    ]
+  },
+  {
+    "id": "d6b9bba3212941e8",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Parse parking CSV",
+    "func": "\nvar text=String(msg.payload||\"\").trim();\nif(!text){msg.payload=[];return msg;}\nvar lines=text.split(/\\r?\\n/), cols=[\"timestamp\", \"bike\", \"status\", \"locked\"], nums=[];\nvar selected=global.get(\"selectedBike\")||\"all\", out=[];\nfor(var i=0;i<lines.length;i++){\n var v=lines[i].split(\",\");\n if(v[0]===\"timestamp\" || v.length<cols.length) continue;\n var o={};\n cols.forEach(function(c,j){o[c]=nums.indexOf(c)>=0?Number(v[j]):v[j];});\n if(selected===\"all\"||o.bike===selected) out.push(o);\n}\nmsg.payload=out; return msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 770,
+    "y": 1140,
+    "wires": [
+      [
+        "e07ff48325fe41e2"
+      ]
+    ]
+  },
+  {
+    "id": "7cfe638d5c9e464b",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Speed statistics",
+    "func": "\nvar a=msg.payload||[],v=a.map(x=>Number(x.speed)).filter(Number.isFinite);\nif(!v.length){msg.payload={average:\"N/A\",maximum:\"N/A\",minimum:\"N/A\",samples:0,tripDuration:\"N/A\"};return msg;}\nvar avg=v.reduce((x,y)=>x+y,0)/v.length;\nvar duration=a.length>1?(new Date(a[a.length-1].timestamp)-new Date(a[0].timestamp))/60000:0;\nmsg.payload={average:avg.toFixed(2),maximum:Math.max(...v).toFixed(2),minimum:Math.min(...v).toFixed(2),samples:v.length,tripDuration:duration.toFixed(1)};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1040,
+    "y": 820,
+    "wires": [
+      [
+        "5610d34fdbd54402"
+      ]
+    ]
+  },
+  {
+    "id": "6917b5fc90684ade",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Battery statistics",
+    "func": "\nvar a=msg.payload||[],v=a.map(x=>Number(x.battery)).filter(Number.isFinite);\nif(!v.length){msg.payload={average:\"N/A\",minimum:\"N/A\",maximum:\"N/A\",lowEvents:0};return msg;}\nmsg.payload={average:(v.reduce((x,y)=>x+y,0)/v.length).toFixed(1),minimum:Math.min(...v).toFixed(1),maximum:Math.max(...v).toFixed(1),lowEvents:v.filter(x=>x<=20).length};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1040,
+    "y": 900,
+    "wires": [
+      [
+        "adfdbb58af1d44db"
+      ]
+    ]
+  },
+  {
+    "id": "881ea9b963a047b3",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Route and distance statistics",
+    "func": "\nvar a=msg.payload||[];\nfunction r(v){return v*Math.PI/180;} function h(a,b,c,d){var R=6371000,x=r(c-a),y=r(d-b),q=Math.sin(x/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q));}\nvar groups={},total=0;\na.forEach(x=>(groups[x.bike]=groups[x.bike]||[]).push(x));\nObject.keys(groups).forEach(function(k){var g=groups[k];for(var i=1;i<g.length;i++){var d=h(g[i-1].latitude,g[i-1].longitude,g[i].latitude,g[i].longitude);if(d<1000)total+=d;}});\nmsg.payload={distanceKm:(total/1000).toFixed(2),points:a.length,bicycles:Object.keys(groups).length,averageAltitude:a.length?(a.reduce((s,x)=>s+Number(x.altitude||0),0)/a.length).toFixed(1):\"N/A\"};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1040,
+    "y": 980,
+    "wires": [
+      [
+        "fb7f3a8963cc447e"
+      ]
+    ]
+  },
+  {
+    "id": "5cec6d913ced4053",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Motion event statistics",
+    "func": "\nvar a=msg.payload||[],m=a.map(x=>Math.sqrt(x.x*x.x+x.y*x.y+x.z*x.z)).filter(Number.isFinite);\nif(!m.length){msg.payload={average:\"N/A\",maximum:\"N/A\",harshAcceleration:0,harshBraking:0,fallEvents:0};return msg;}\nmsg.payload={average:(m.reduce((x,y)=>x+y,0)/m.length).toFixed(2),maximum:Math.max(...m).toFixed(2),harshAcceleration:a.filter(x=>x.x>=2.5).length,harshBraking:a.filter(x=>x.x<=-2.5).length,fallEvents:a.filter(x=>x.tilt_angle>60).length};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1040,
+    "y": 1060,
+    "wires": [
+      [
+        "bcf9bf698df64ecf"
+      ]
+    ]
+  },
+  {
+    "id": "e07ff48325fe41e2",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Parking statistics",
+    "func": "\nvar a=msg.payload||[],parked=a.filter(x=>String(x.status).toLowerCase()===\"parked\");\nvar byBike={}; parked.forEach(x=>byBike[x.bike]=(byBike[x.bike]||0)+1);\nvar most=Object.keys(byBike).sort((x,y)=>byBike[y]-byBike[x])[0]||\"N/A\";\nmsg.payload={parkingRecords:parked.length,totalRecords:a.length,lockedRecords:a.filter(x=>String(x.locked)===\"true\").length,mostParkedBike:most};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1040,
+    "y": 1140,
+    "wires": [
+      [
+        "aa1bd3d4334a45eb"
+      ]
+    ]
+  },
+  {
+    "id": "5610d34fdbd54402",
+    "type": "ui_template",
+    "z": "f2aa8b217634494c",
+    "group": "46b268098d2d4151",
+    "name": "Speed Analytics",
+    "order": 1,
+    "width": 8,
+    "height": 4,
+    "format": "<div><h3>Speed Analytics</h3><p>Average speed: {{msg.payload.average}} km/h<br>Maximum speed: {{msg.payload.maximum}} km/h<br>Minimum speed: {{msg.payload.minimum}} km/h<br>Trip duration: {{msg.payload.tripDuration}} min<br>Samples: {{msg.payload.samples}}</p></div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1320,
+    "y": 860,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "adfdbb58af1d44db",
+    "type": "ui_template",
+    "z": "f2aa8b217634494c",
+    "group": "46b268098d2d4151",
+    "name": "Battery Analytics",
+    "order": 2,
+    "width": 8,
+    "height": 4,
+    "format": "<div><h3>Battery Analytics</h3><p>Average battery: {{msg.payload.average}}%<br>Minimum battery: {{msg.payload.minimum}}%<br>Maximum battery: {{msg.payload.maximum}}%<br>Low-battery events: {{msg.payload.lowEvents}}</p></div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1320,
+    "y": 940,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "fb7f3a8963cc447e",
+    "type": "ui_template",
+    "z": "f2aa8b217634494c",
+    "group": "46b268098d2d4151",
+    "name": "Route Analytics",
+    "order": 3,
+    "width": 8,
+    "height": 4,
+    "format": "<div><h3>Route Analytics</h3><p>Total distance: {{msg.payload.distanceKm}} km<br>GPS points: {{msg.payload.points}}<br>Bicycles represented: {{msg.payload.bicycles}}<br>Average altitude: {{msg.payload.averageAltitude}} m</p></div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1320,
+    "y": 1020,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "bcf9bf698df64ecf",
+    "type": "ui_template",
+    "z": "f2aa8b217634494c",
+    "group": "46b268098d2d4151",
+    "name": "Motion and Safety Analytics",
+    "order": 4,
+    "width": 8,
+    "height": 4,
+    "format": "<div><h3>Motion and Safety Analytics</h3><p>Average magnitude: {{msg.payload.average}}<br>Maximum magnitude: {{msg.payload.maximum}}<br>Harsh acceleration: {{msg.payload.harshAcceleration}}<br>Harsh braking: {{msg.payload.harshBraking}}<br>Fall/tilt events: {{msg.payload.fallEvents}}</p></div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1320,
+    "y": 1100,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "aa1bd3d4334a45eb",
+    "type": "ui_template",
+    "z": "f2aa8b217634494c",
+    "group": "46b268098d2d4151",
+    "name": "Parking Analytics",
+    "order": 5,
+    "width": 8,
+    "height": 4,
+    "format": "<div><h3>Parking Analytics</h3><p>Parking records: {{msg.payload.parkingRecords}}<br>Locked records: {{msg.payload.lockedRecords}}<br>Total records: {{msg.payload.totalRecords}}<br>Most parked bicycle: {{msg.payload.mostParkedBike}}</p></div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1320,
+    "y": 1180,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "27dea66bac4a4f4d",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Prepare speed chart",
+    "func": "msg.field=\"speed\";msg.title=\"Speed\";\n\nvar a=msg.payload||[], field=msg.field || \"speed\", title=msg.title || field;\nvar pts=a.map(x=>({x:new Date(x.timestamp),y:Number(x[field])})).filter(p=>Number.isFinite(p.y));\nmsg.payload=[{series:[title],data:[pts],labels:[\"\"]}]; return msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1040,
+    "y": 1220,
+    "wires": [
+      [
+        "6ca19942e69f447b"
+      ]
+    ]
+  },
+  {
+    "id": "91f0ac63abe9474f",
+    "type": "function",
+    "z": "f2aa8b217634494c",
+    "name": "Prepare battery chart",
+    "func": "msg.field=\"battery\";msg.title=\"Battery\";\n\nvar a=msg.payload||[], field=msg.field || \"speed\", title=msg.title || field;\nvar pts=a.map(x=>({x:new Date(x.timestamp),y:Number(x[field])})).filter(p=>Number.isFinite(p.y));\nmsg.payload=[{series:[title],data:[pts],labels:[\"\"]}]; return msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1040,
+    "y": 1280,
+    "wires": [
+      [
+        "2ad37c8092fd4afc"
+      ]
+    ]
+  },
+  {
+    "id": "6ca19942e69f447b",
+    "type": "ui_chart",
+    "z": "f2aa8b217634494c",
+    "name": "Historical speed profile",
+    "group": "46b268098d2d4151",
+    "order": 6,
+    "width": 12,
+    "height": 5,
+    "label": "Historical speed profile",
+    "chartType": "line",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "linear",
+    "nodata": "No historical data yet",
+    "dot": false,
+    "ymin": "",
+    "ymax": "",
+    "removeOlder": 1,
+    "removeOlderPoints": "",
+    "removeOlderUnit": "3600",
+    "cutout": 0,
+    "useOneColor": false,
+    "useUTC": false,
+    "colors": [
+      "#1f77b4",
+      "#aec7e8",
+      "#ff7f0e"
+    ],
+    "outputs": 1,
+    "useDifferentColor": false,
+    "className": "",
+    "x": 1320,
+    "y": 1220,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "2ad37c8092fd4afc",
+    "type": "ui_chart",
+    "z": "f2aa8b217634494c",
+    "name": "Historical battery profile",
+    "group": "46b268098d2d4151",
+    "order": 7,
+    "width": 12,
+    "height": 5,
+    "label": "Historical battery profile",
+    "chartType": "line",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "linear",
+    "nodata": "No historical data yet",
+    "dot": false,
+    "ymin": "",
+    "ymax": "",
+    "removeOlder": 1,
+    "removeOlderPoints": "",
+    "removeOlderUnit": "3600",
+    "cutout": 0,
+    "useOneColor": false,
+    "useUTC": false,
+    "colors": [
+      "#1f77b4",
+      "#aec7e8",
+      "#ff7f0e"
+    ],
+    "outputs": 1,
+    "useDifferentColor": false,
+    "className": "",
+    "x": 1320,
+    "y": 1280,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "19e5c58fb0594d72",
+    "type": "ui_template",
+    "z": "f2aa8b217634494c",
+    "group": "46b268098d2d4151",
+    "name": "Storage information",
+    "order": 8,
+    "width": 24,
+    "height": 2,
+    "format": "<div><b>Historical database prototype:</b> CSV files are stored in <code>./bicycle_data/</code>. Use the Inject node named <i>Refresh historical analytics</i> to process them immediately during the demo.</div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1330,
+    "y": 1360,
+    "wires": [
+      []
+    ]
+  }
+]
