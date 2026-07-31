@@ -1,0 +1,59 @@
+var a = msg.payload || [];
+
+function r(v) {
+    return v * Math.PI / 180;
+}
+
+function h(a, b, c, d) {
+    var R = 6371000;
+
+    var x = r(c - a);
+    var y = r(d - b);
+
+    var q =
+        Math.sin(x / 2) ** 2 +
+        Math.cos(r(a)) *
+        Math.cos(r(c)) *
+        Math.sin(y / 2) ** 2;
+
+    return R * 2 * Math.atan2(Math.sqrt(q), Math.sqrt(1 - q));
+}
+
+var groups = {};
+var total = 0;
+
+a.forEach(function (x) {
+    (groups[x.bike] = groups[x.bike] || []).push(x);
+});
+
+Object.keys(groups).forEach(function (k) {
+    var g = groups[k];
+
+    for (var i = 1; i < g.length; i++) {
+        var d = h(
+            g[i - 1].latitude,
+            g[i - 1].longitude,
+            g[i].latitude,
+            g[i].longitude
+        );
+
+        if (d < 1000) {
+            total += d;
+        }
+    }
+});
+
+msg.payload = {
+    distanceKm: (total / 1000).toFixed(2),
+    points: a.length,
+    bicycles: Object.keys(groups).length,
+    averageAltitude: a.length
+        ? (
+              a.reduce(function (s, x) {
+                  return s + Number(x.altitude || 0);
+              }, 0) / a.length
+          ).toFixed(1)
+        : "N/A"
+};
+
+return msg;

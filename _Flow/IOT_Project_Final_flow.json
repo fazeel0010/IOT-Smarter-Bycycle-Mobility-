@@ -8,82 +8,6 @@
         "env": []
     },
     {
-        "id": "0fe71facd770409c",
-        "type": "mqtt-broker",
-        "name": "Local Mosquitto",
-        "broker": "localhost",
-        "port": "1883",
-        "clientid": "",
-        "autoConnect": true,
-        "usetls": false,
-        "protocolVersion": "4",
-        "keepalive": "60",
-        "cleansession": true,
-        "autoUnsubscribe": true
-    },
-    {
-        "id": "2cc61340aadf433e",
-        "type": "ui_tab",
-        "name": "Live Monitoring",
-        "icon": "directions_bike",
-        "order": 1,
-        "disabled": false,
-        "hidden": false
-    },
-    {
-        "id": "cf64f95943c64109",
-        "type": "ui_tab",
-        "name": "Historical Analytics",
-        "icon": "timeline",
-        "order": 2,
-        "disabled": false,
-        "hidden": false
-    },
-    {
-        "id": "8f8a663d04fc44e8",
-        "type": "ui_group",
-        "name": "Live Bicycle Data",
-        "tab": "2cc61340aadf433e",
-        "order": 1,
-        "disp": true,
-        "width": "24",
-        "collapse": false,
-        "className": ""
-    },
-    {
-        "id": "0ff8acf7a37e40a1",
-        "type": "ui_group",
-        "name": "Device Status",
-        "tab": "2cc61340aadf433e",
-        "order": 2,
-        "disp": true,
-        "width": "24",
-        "collapse": false,
-        "className": ""
-    },
-    {
-        "id": "48b54734aec64996",
-        "type": "ui_group",
-        "name": "Events and Alarms",
-        "tab": "2cc61340aadf433e",
-        "order": 3,
-        "disp": true,
-        "width": "24",
-        "collapse": false,
-        "className": ""
-    },
-    {
-        "id": "46b268098d2d4151",
-        "type": "ui_group",
-        "name": "Historical Mobility Analytics",
-        "tab": "cf64f95943c64109",
-        "order": 1,
-        "disp": true,
-        "width": "24",
-        "collapse": false,
-        "className": ""
-    },
-    {
         "id": "3c5459dd753e4a70",
         "type": "ui_dropdown",
         "z": "f2aa8b217634494c",
@@ -136,7 +60,7 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Save selected bicycle",
-        "func": "var bike = msg.payload || \"all\";\nglobal.set(\"selectedBike\", bike);\nmsg.payload = bike === \"all\" ? \"All bicycles\" : bike.replace(\"_\", \" \").toUpperCase();\nreturn msg;",
+        "func": "var bike = msg.payload || \"all\";\nglobal.set(\"selectedBike\", bike);\nmsg.payload = bike === \"all\" ? \"All bicycles\" : bike.replace(\"_\", \" \").toUpperCase();\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -198,7 +122,7 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Normalize sensor message",
-        "func": "\nvar p = msg.payload;\nif (typeof p === \"string\") {\n    try { p = JSON.parse(p); } catch(e) { node.warn(\"Invalid JSON\"); return null; }\n}\nif (!p || typeof p !== \"object\") return null;\n\np.bike_id = p.bike_id || p.sensor_team || p.sensor_id;\nif (!p.bike_id) return null;\np.sensor_type = p.sensor_type || p.type;\np.timestamp = p.timestamp || new Date().toISOString();\np.timestampRegular = Number(p.timestampRegular || Date.now());\np.data = p.data || {};\nmsg.payload = p;\nreturn msg;\n",
+        "func": "var p = msg.payload;\n\nif (typeof p === \"string\") {\n    try {\n        p = JSON.parse(p);\n    } catch (e) {\n        node.warn(\"Invalid JSON\");\n        return null;\n    }\n}\n\nif (!p || typeof p !== \"object\") {\n    return null;\n}\n\np.bike_id = p.bike_id || p.sensor_team || p.sensor_id;\n\nif (!p.bike_id) {\n    return null;\n}\n\np.sensor_type = p.sensor_type || p.type;\np.timestamp = p.timestamp || new Date().toISOString();\np.timestampRegular = Number(p.timestampRegular || Date.now());\np.data = p.data || {};\n\nmsg.payload = p;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -219,14 +143,14 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Hot Path: process live bicycle data",
-        "func": "\nvar p = msg.payload;\nvar bike = p.bike_id;\nvar selected = global.get(\"selectedBike\") || \"all\";\nvar states = flow.get(\"bikeStates\") || {};\nvar s = states[bike] || {\n    speed:0,battery:100,latitude:null,longitude:null,altitude:0,\n    acceleration:0,parkingStatus:\"Moving\",locked:false,tripCount:0,\n    totalDistanceKm:0,lastSeen:0,lastLat:null,lastLon:null,parkingSince:null,\n    gnssQuality:\"Unknown\",satellites:0,hdop:null,deviceHealth:\"Healthy\",\n    sensors:{position:false,speed:false,battery:false,acceleration:false,parking:false}\n};\n\nfunction rad(v){ return v*Math.PI/180; }\nfunction hav(lat1,lon1,lat2,lon2){\n    var R=6371000,dLat=rad(lat2-lat1),dLon=rad(lon2-lon1);\n    var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2);\n    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));\n}\nfunction inZone(lat,lon,z){\n    return hav(lat,lon,z.lat,z.lon) <= z.radius;\n}\nvar parkingZones = [\n    {name:\"Brignole Station\",lat:44.4067,lon:8.9473,radius:180},\n    {name:\"Piazza De Ferrari\",lat:44.4072,lon:8.9339,radius:180},\n    {name:\"Porto Antico\",lat:44.4103,lon:8.9266,radius:220}\n];\nvar restrictedZones = [\n    {name:\"Restricted pedestrian zone\",lat:44.4084,lon:8.9322,radius:90}\n];\n\ns.lastSeen = Date.now();\nvar alerts = [];\nvar wasMoving = s.speed > 2;\n\nif (p.sensor_type === \"position\") {\n    var lat = Number(p.data.latitude), lon = Number(p.data.longitude);\n    if (!isNaN(lat) && !isNaN(lon)) {\n        if (s.lastLat !== null && s.lastLon !== null) {\n            var step = hav(s.lastLat,s.lastLon,lat,lon);\n            if (step < 1000) s.totalDistanceKm += step/1000;\n            if (s.locked && step > 20) alerts.push(\"Possible theft or unauthorized movement: \" + bike);\n        }\n        s.latitude=lat; s.longitude=lon; s.lastLat=lat; s.lastLon=lon;\n    }\n    s.altitude = Number(p.data.altitude || s.altitude || 0);\n    s.gnssQuality = p.data.gnss_quality || p.data.gnssQuality || s.gnssQuality;\n    s.satellites = Number(p.data.satellites || s.satellites || 0);\n    s.hdop = p.data.hdop !== undefined ? Number(p.data.hdop) : s.hdop;\n    s.sensors.position = true;\n\n    if (Number(p.data.tilt_angle || 0) > 60) alerts.push(\"Possible fall or incorrect parking: \" + bike);\n    restrictedZones.forEach(function(z){\n        if (inZone(lat,lon,z)) alerts.push(bike + \" entered \" + z.name);\n    });\n}\nif (p.sensor_type === \"speed\") {\n    s.speed = Number(p.data.speed || 0);\n    s.sensors.speed = true;\n    if (!wasMoving && s.speed > 2) s.tripCount += 1;\n    if (s.speed > 35) alerts.push(\"Dangerous speed detected: \" + bike);\n}\nif (p.sensor_type === \"battery\") {\n    s.battery = Number(p.data.battery !== undefined ? p.data.battery : p.data.level);\n    s.sensors.battery = true;\n    if (s.battery <= 20) alerts.push(\"Low battery: \" + bike + \" (\" + s.battery + \"%)\");\n}\nif (p.sensor_type === \"acceleration\") {\n    var a = p.data.acceleration;\n    if (a === undefined && p.data.x !== undefined) {\n        var x=Number(p.data.x||0),y=Number(p.data.y||0),z=Number(p.data.z||0);\n        a=Math.sqrt(x*x+y*y+z*z);\n    }\n    s.acceleration = Number(a || 0);\n    s.sensors.acceleration = true;\n    if (Number(p.data.x || s.acceleration) >= 2.5) alerts.push(\"Harsh acceleration: \" + bike);\n    if (Number(p.data.x || 0) <= -2.5) alerts.push(\"Harsh braking: \" + bike);\n    if (Number(p.data.vibration || 0) > 8) alerts.push(\"Abnormal vibration: \" + bike);\n}\nif (p.sensor_type === \"parking\") {\n    s.parkingStatus = p.data.status || p.data.parking_status || \"Moving\";\n    s.locked = Boolean(p.data.locked);\n    s.sensors.parking = true;\n    if (String(s.parkingStatus).toLowerCase() === \"parked\") {\n        if (!s.parkingSince) s.parkingSince = Date.now();\n        if (s.latitude !== null) {\n            var authorized = parkingZones.some(function(z){return inZone(s.latitude,s.longitude,z);});\n            if (!authorized) alerts.push(\"Parking violation outside authorized zone: \" + bike);\n        }\n    } else {\n        s.parkingSince = null;\n    }\n}\nif (p.sensor_type === \"device_status\") {\n    s.deviceHealth = p.data.device_health || p.data.health || s.deviceHealth;\n    if (p.data.sensor_availability) s.sensors = Object.assign(s.sensors,p.data.sensor_availability);\n    if (s.deviceHealth !== \"Healthy\") alerts.push(\"Device health warning: \" + bike);\n}\n\nstates[bike]=s;\nflow.set(\"bikeStates\",states);\n\nvar visible = selected === \"all\" || selected === bike;\nvar speedOut=null,batteryOut=null,mapOut=null,statusOut=null,alertOut=null,distanceOut=null,accelOut=null,parkingOut=null;\n\nif (selected === \"all\") {\n    var keys=Object.keys(states),count=keys.length||1;\n    var sp=0,bt=0,dist=0,acc=0;\n    keys.forEach(function(k){sp+=Number(states[k].speed||0);bt+=Number(states[k].battery||0);dist+=Number(states[k].totalDistanceKm||0);acc+=Number(states[k].acceleration||0);});\n    speedOut={payload:(sp/count).toFixed(2)};\n    batteryOut={payload:(bt/count).toFixed(1)};\n    distanceOut={payload:dist.toFixed(2)};\n    accelOut={payload:(acc/count).toFixed(2)};\n} else if (visible) {\n    speedOut={payload:s.speed};\n    batteryOut={payload:s.battery};\n    distanceOut={payload:s.totalDistanceKm.toFixed(2)};\n    accelOut={payload:s.acceleration.toFixed(2)};\n}\nif (visible && p.sensor_type === \"position\" && s.latitude !== null) {\n    mapOut={payload:{name:bike,lat:s.latitude,lon:s.longitude,icon:\"bicycle\",layer:\"Bicycles\",\n        popup:\"<b>\"+bike+\"</b><br>Speed: \"+s.speed+\" km/h<br>Battery: \"+s.battery+\"%<br>Altitude: \"+s.altitude+\" m\"}};\n}\nif (visible) {\n    var parkingDuration = s.parkingSince ? Math.floor((Date.now()-s.parkingSince)/1000) : 0;\n    statusOut={payload:{\n        bike: selected===\"all\" ? \"Fleet\" : bike,\n        connectivity:\"Online\",\n        lastSeen:new Date(s.lastSeen).toLocaleString(),\n        gnssQuality:s.gnssQuality,\n        satellites:s.satellites,\n        hdop:s.hdop,\n        altitude:s.altitude,\n        deviceHealth:s.deviceHealth,\n        sensors:s.sensors,\n        trips:s.tripCount,\n        parkingDuration:parkingDuration\n    }};\n    parkingOut={payload:s.parkingStatus};\n}\nif (alerts.length) alertOut={payload:alerts.join(\" | \")};\nreturn [speedOut,batteryOut,mapOut,statusOut,alertOut,distanceOut,accelOut,parkingOut];\n",
+        "func": "var p = msg.payload;\nvar bike = p.bike_id;\nvar selected = global.get(\"selectedBike\") || \"all\";\nvar states = flow.get(\"bikeStates\") || {};\n\nvar s = states[bike] || {\n    speed: 0,\n    battery: 100,\n    latitude: null,\n    longitude: null,\n    altitude: 0,\n    acceleration: 0,\n    parkingStatus: \"Moving\",\n    locked: false,\n    tripCount: 0,\n    totalDistanceKm: 0,\n    lastSeen: 0,\n    lastLat: null,\n    lastLon: null,\n    parkingSince: null,\n    gnssQuality: \"Unknown\",\n    satellites: 0,\n    hdop: null,\n    deviceHealth: \"Healthy\",\n    sensors: {\n        position: false,\n        speed: false,\n        battery: false,\n        acceleration: false,\n        parking: false\n    }\n};\n\nfunction rad(v) {\n    return v * Math.PI / 180;\n}\n\nfunction hav(lat1, lon1, lat2, lon2) {\n    var R = 6371000;\n    var dLat = rad(lat2 - lat1);\n    var dLon = rad(lon2 - lon1);\n\n    var a =\n        Math.sin(dLat / 2) * Math.sin(dLat / 2) +\n        Math.cos(rad(lat1)) *\n            Math.cos(rad(lat2)) *\n            Math.sin(dLon / 2) *\n            Math.sin(dLon / 2);\n\n    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));\n}\n\nfunction inZone(lat, lon, z) {\n    return hav(lat, lon, z.lat, z.lon) <= z.radius;\n}\n\nvar parkingZones = [\n    {\n        name: \"Brignole Station\",\n        lat: 44.4067,\n        lon: 8.9473,\n        radius: 180\n    },\n    {\n        name: \"Piazza De Ferrari\",\n        lat: 44.4072,\n        lon: 8.9339,\n        radius: 180\n    },\n    {\n        name: \"Porto Antico\",\n        lat: 44.4103,\n        lon: 8.9266,\n        radius: 220\n    }\n];\n\nvar restrictedZones = [\n    {\n        name: \"Restricted pedestrian zone\",\n        lat: 44.4084,\n        lon: 8.9322,\n        radius: 90\n    }\n];\n\ns.lastSeen = Date.now();\n\nvar alerts = [];\nvar wasMoving = s.speed > 2;\n\nif (p.sensor_type === \"position\") {\n    var lat = Number(p.data.latitude);\n    var lon = Number(p.data.longitude);\n\n    if (!isNaN(lat) && !isNaN(lon)) {\n        if (s.lastLat !== null && s.lastLon !== null) {\n            var step = hav(s.lastLat, s.lastLon, lat, lon);\n\n            if (step < 1000) {\n                s.totalDistanceKm += step / 1000;\n            }\n\n            if (s.locked && step > 20) {\n                alerts.push(\"Possible theft or unauthorized movement: \" + bike);\n            }\n        }\n\n        s.latitude = lat;\n        s.longitude = lon;\n        s.lastLat = lat;\n        s.lastLon = lon;\n    }\n\n    s.altitude = Number(p.data.altitude || s.altitude || 0);\n    s.gnssQuality =\n        p.data.gnss_quality ||\n        p.data.gnssQuality ||\n        s.gnssQuality;\n\n    s.satellites = Number(\n        p.data.satellites || s.satellites || 0\n    );\n\n    s.hdop =\n        p.data.hdop !== undefined\n            ? Number(p.data.hdop)\n            : s.hdop;\n\n    s.sensors.position = true;\n\n    if (Number(p.data.tilt_angle || 0) > 60) {\n        alerts.push(\n            \"Possible fall or incorrect parking: \" + bike\n        );\n    }\n\n    restrictedZones.forEach(function (z) {\n        if (inZone(lat, lon, z)) {\n            alerts.push(bike + \" entered \" + z.name);\n        }\n    });\n}\n\nif (p.sensor_type === \"speed\") {\n    s.speed = Number(p.data.speed || 0);\n    s.sensors.speed = true;\n\n    if (!wasMoving && s.speed > 2) {\n        s.tripCount += 1;\n    }\n\n    if (s.speed > 35) {\n        alerts.push(\"Dangerous speed detected: \" + bike);\n    }\n}\n\nif (p.sensor_type === \"battery\") {\n    s.battery = Number(\n        p.data.battery !== undefined\n            ? p.data.battery\n            : p.data.level\n    );\n\n    s.sensors.battery = true;\n\n    if (s.battery <= 20) {\n        alerts.push(\n            \"Low battery: \" +\n                bike +\n                \" (\" +\n                s.battery +\n                \"%)\"\n        );\n    }\n}\n\nif (p.sensor_type === \"acceleration\") {\n    var a = p.data.acceleration;\n\n    if (a === undefined && p.data.x !== undefined) {\n        var x = Number(p.data.x || 0);\n        var y = Number(p.data.y || 0);\n        var z = Number(p.data.z || 0);\n\n        a = Math.sqrt(x * x + y * y + z * z);\n    }\n\n    s.acceleration = Number(a || 0);\n    s.sensors.acceleration = true;\n\n    if (Number(p.data.x || s.acceleration) >= 2.5) {\n        alerts.push(\"Harsh acceleration: \" + bike);\n    }\n\n    if (Number(p.data.x || 0) <= -2.5) {\n        alerts.push(\"Harsh braking: \" + bike);\n    }\n\n    if (Number(p.data.vibration || 0) > 8) {\n        alerts.push(\"Abnormal vibration: \" + bike);\n    }\n}\n\nif (p.sensor_type === \"parking\") {\n    s.parkingStatus =\n        p.data.status ||\n        p.data.parking_status ||\n        \"Moving\";\n\n    s.locked = Boolean(p.data.locked);\n    s.sensors.parking = true;\n\n    if (\n        String(s.parkingStatus).toLowerCase() === \"parked\"\n    ) {\n        if (!s.parkingSince) {\n            s.parkingSince = Date.now();\n        }\n\n        if (s.latitude !== null) {\n            var authorized = parkingZones.some(function (z) {\n                return inZone(\n                    s.latitude,\n                    s.longitude,\n                    z\n                );\n            });\n\n            if (!authorized) {\n                alerts.push(\n                    \"Parking violation outside authorized zone: \" +\n                        bike\n                );\n            }\n        }\n    } else {\n        s.parkingSince = null;\n    }\n}\n\nif (p.sensor_type === \"device_status\") {\n    s.deviceHealth =\n        p.data.device_health ||\n        p.data.health ||\n        s.deviceHealth;\n\n    if (p.data.sensor_availability) {\n        s.sensors = Object.assign(\n            s.sensors,\n            p.data.sensor_availability\n        );\n    }\n\n    if (s.deviceHealth !== \"Healthy\") {\n        alerts.push(\n            \"Device health warning: \" + bike\n        );\n    }\n}\n\nstates[bike] = s;\nflow.set(\"bikeStates\", states);\n\nvar visible =\n    selected === \"all\" || selected === bike;\n\nvar speedOut = null;\nvar batteryOut = null;\nvar mapOut = null;\nvar statusOut = null;\nvar alertOut = null;\nvar distanceOut = null;\nvar accelOut = null;\nvar parkingOut = null;\n\nif (selected === \"all\") {\n    var keys = Object.keys(states);\n    var count = keys.length || 1;\n\n    var sp = 0;\n    var bt = 0;\n    var dist = 0;\n    var acc = 0;\n\n    keys.forEach(function (k) {\n        sp += Number(states[k].speed || 0);\n        bt += Number(states[k].battery || 0);\n        dist += Number(\n            states[k].totalDistanceKm || 0\n        );\n        acc += Number(\n            states[k].acceleration || 0\n        );\n    });\n\n    speedOut = {\n        payload: (sp / count).toFixed(2)\n    };\n\n    batteryOut = {\n        payload: (bt / count).toFixed(1)\n    };\n\n    distanceOut = {\n        payload: dist.toFixed(2)\n    };\n\n    accelOut = {\n        payload: (acc / count).toFixed(2)\n    };\n\n} else if (visible) {\n\n    speedOut = {\n        payload: s.speed\n    };\n\n    batteryOut = {\n        payload: s.battery\n    };\n\n    distanceOut = {\n        payload: s.totalDistanceKm.toFixed(2)\n    };\n\n    accelOut = {\n        payload: s.acceleration.toFixed(2)\n    };\n}\n\nif (\n    visible &&\n    p.sensor_type === \"position\" &&\n    s.latitude !== null\n) {\n    mapOut = {\n        payload: {\n            name: bike,\n            lat: s.latitude,\n            lon: s.longitude,\n            icon: \"bicycle\",\n            layer: \"Bicycles\",\n            popup:\n                \"<b>\" +\n                bike +\n                \"</b><br>Speed: \" +\n                s.speed +\n                \" km/h<br>Battery: \" +\n                s.battery +\n                \"%<br>Altitude: \" +\n                s.altitude +\n                \" m\"\n        }\n    };\n}\n\nif (visible) {\n    var parkingDuration = s.parkingSince\n        ? Math.floor(\n              (Date.now() - s.parkingSince) / 1000\n          )\n        : 0;\n\n    statusOut = {\n        payload: {\n            bike:\n                selected === \"all\"\n                    ? \"Fleet\"\n                    : bike,\n            connectivity: \"Online\",\n            lastSeen: new Date(\n                s.lastSeen\n            ).toLocaleString(),\n            gnssQuality: s.gnssQuality,\n            satellites: s.satellites,\n            hdop: s.hdop,\n            altitude: s.altitude,\n            deviceHealth: s.deviceHealth,\n            sensors: s.sensors,\n            trips: s.tripCount,\n            parkingDuration: parkingDuration\n        }\n    };\n\n    parkingOut = {\n        payload: s.parkingStatus\n    };\n}\n\nif (alerts.length) {\n    alertOut = {\n        payload: alerts.join(\" | \")\n    };\n}\n\nreturn [\n    speedOut,\n    batteryOut,\n    mapOut,\n    statusOut,\n    alertOut,\n    distanceOut,\n    accelOut,\n    parkingOut\n];",
         "outputs": 8,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 760,
+        "x": 780,
         "y": 240,
         "wires": [
             [
@@ -279,8 +203,8 @@
         "seg2": "35",
         "diff": false,
         "className": "",
-        "x": 1120,
-        "y": 40,
+        "x": 1200,
+        "y": 20,
         "wires": []
     },
     {
@@ -307,8 +231,8 @@
         "seg2": "50",
         "diff": false,
         "className": "",
-        "x": 1090,
-        "y": 100,
+        "x": 1180,
+        "y": 80,
         "wires": []
     },
     {
@@ -343,8 +267,8 @@
         "mapurl": "",
         "mapopt": "",
         "mapwms": false,
-        "x": 1130,
-        "y": 160,
+        "x": 1210,
+        "y": 140,
         "wires": []
     },
     {
@@ -364,8 +288,8 @@
         "font": "",
         "fontSize": 16,
         "color": "#000000",
-        "x": 1100,
-        "y": 220,
+        "x": 1180,
+        "y": 200,
         "wires": []
     },
     {
@@ -385,8 +309,8 @@
         "font": "",
         "fontSize": 16,
         "color": "#000000",
-        "x": 1100,
-        "y": 280,
+        "x": 1180,
+        "y": 260,
         "wires": []
     },
     {
@@ -406,8 +330,8 @@
         "font": "",
         "fontSize": 16,
         "color": "#000000",
-        "x": 1100,
-        "y": 340,
+        "x": 1180,
+        "y": 320,
         "wires": []
     },
     {
@@ -425,8 +349,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 1140,
-        "y": 400,
+        "x": 1220,
+        "y": 380,
         "wires": [
             []
         ]
@@ -448,8 +372,8 @@
         "font": "",
         "fontSize": 18,
         "color": "#000000",
-        "x": 1110,
-        "y": 460,
+        "x": 1190,
+        "y": 440,
         "wires": []
     },
     {
@@ -482,15 +406,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Detect offline bicycles",
-        "func": "\nvar states=flow.get(\"bikeStates\")||{};\nvar selected=global.get(\"selectedBike\")||\"all\";\nvar now=Date.now(), offline=[];\nObject.keys(states).forEach(function(k){\n    if(now-Number(states[k].lastSeen||0)>15000) offline.push(k);\n});\nif(!offline.length) return null;\nif(selected===\"all\" || offline.indexOf(selected)>=0){\n    msg.payload=\"Connectivity alert: \"+offline.join(\", \")+\" offline\";\n    return msg;\n}\nreturn null;\n",
+        "func": "var states = flow.get(\"bikeStates\") || {};\nvar selected = global.get(\"selectedBike\") || \"all\";\nvar now = Date.now(),\n    offline = [];\n\nObject.keys(states).forEach(function (k) {\n    if (now - Number(states[k].lastSeen || 0) > 15000) {\n        offline.push(k);\n    }\n});\n\nif (!offline.length) {\n    return null;\n}\n\nif (selected === \"all\" || offline.indexOf(selected) >= 0) {\n    msg.payload = \"Connectivity alert: \" + offline.join(\", \") + \" offline\";\n    return msg;\n}\n\nreturn null;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 740,
-        "y": 420,
+        "x": 800,
+        "y": 380,
         "wires": [
             [
                 "0432cc10cbe04757"
@@ -502,15 +426,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Cold Path: prepare CSV records",
-        "func": "\nvar p=msg.payload,b=p.bike_id,t=p.timestamp, d=p.data||{};\nvar base=\"./bicycle_data/\";\nfunction out(file,header,row){ return {filename:base+file,payload:header+\"\\n\"+row}; }\nswitch(p.sensor_type){\ncase \"speed\":\n return [out(\"speed_data.csv\",\"timestamp,bike,speed\",`${t},${b},${Number(d.speed||0)}`),null,null,null,null];\ncase \"battery\":\n return [null,out(\"battery_data.csv\",\"timestamp,bike,battery\",`${t},${b},${Number(d.battery!==undefined?d.battery:d.level||0)}`),null,null,null];\ncase \"position\":\n return [null,null,out(\"gps_data.csv\",\"timestamp,bike,latitude,longitude,altitude,gnss_quality,satellites,hdop\",`${t},${b},${d.latitude},${d.longitude},${Number(d.altitude||0)},${d.gnss_quality||d.gnssQuality||\"Unknown\"},${Number(d.satellites||0)},${d.hdop!==undefined?d.hdop:\"\"}`),null,null];\ncase \"acceleration\":\n return [null,null,null,out(\"acceleration_data.csv\",\"timestamp,bike,x,y,z,vibration,tilt_angle\",`${t},${b},${Number(d.x||0)},${Number(d.y||0)},${Number(d.z||0)},${Number(d.vibration||0)},${Number(d.tilt_angle||0)}`),null];\ncase \"parking\":\n return [null,null,null,null,out(\"parking_data.csv\",\"timestamp,bike,status,locked\",`${t},${b},${d.status||d.parking_status||\"Moving\"},${Boolean(d.locked)}`)];\ndefault:return null;\n}\n",
+        "func": "var p = msg.payload,\n    b = p.bike_id,\n    t = p.timestamp,\n    d = p.data || {};\n\nvar base = \"C:/Users/timkn/Downloads/IOT Course/bicycle_simulator_complete/historical_data/\";\n\nfunction out(file, header, row) {\n    return {\n        filename: base + file,\n        payload: header + \"\\n\" + row\n    };\n}\n\nswitch (p.sensor_type) {\n\n    case \"speed\":\n        return [\n            out(\n                \"speed_data.csv\",\n                \"timestamp,bike,speed\",\n                `${t},${b},${Number(d.speed || 0)}`\n            ),\n            null,\n            null,\n            null,\n            null\n        ];\n\n    case \"battery\":\n        return [\n            null,\n            out(\n                \"battery_data.csv\",\n                \"timestamp,bike,battery\",\n                `${t},${b},${Number(d.battery !== undefined ? d.battery : d.level || 0)}`\n            ),\n            null,\n            null,\n            null\n        ];\n\n    case \"position\":\n        return [\n            null,\n            null,\n            out(\n                \"gps_data.csv\",\n                \"timestamp,bike,latitude,longitude,altitude,gnss_quality,satellites,hdop\",\n                `${t},${b},${d.latitude},${d.longitude},${Number(d.altitude || 0)},${d.gnss_quality || d.gnssQuality || \"Unknown\"},${Number(d.satellites || 0)},${d.hdop !== undefined ? d.hdop : \"\"}`\n            ),\n            null,\n            null\n        ];\n\n    case \"acceleration\":\n        return [\n            null,\n            null,\n            null,\n            out(\n                \"acceleration_data.csv\",\n                \"timestamp,bike,x,y,z,vibration,tilt_angle\",\n                `${t},${b},${Number(d.x || 0)},${Number(d.y || 0)},${Number(d.z || 0)},${Number(d.vibration || 0)},${Number(d.tilt_angle || 0)}`\n            ),\n            null\n        ];\n\n    case \"parking\":\n        return [\n            null,\n            null,\n            null,\n            null,\n            out(\n                \"parking_data.csv\",\n                \"timestamp,bike,status,locked\",\n                `${t},${b},${d.status || d.parking_status || \"Moving\"},${Boolean(d.locked)}`\n            )\n        ];\n\n    default:\n        return null;\n}",
         "outputs": 5,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 550,
-        "y": 560,
+        "x": 610,
+        "y": 600,
         "wires": [
             [
                 "0b20cce40afb46fc"
@@ -624,15 +548,15 @@
                 "p": "payload"
             }
         ],
-        "repeat": "3600",
+        "repeat": "60",
         "crontab": "",
         "once": true,
         "onceDelay": 3,
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 150,
-        "y": 1020,
+        "x": 200,
+        "y": 1060,
         "wires": [
             [
                 "b665abed2fce4113",
@@ -648,15 +572,15 @@
         "type": "file in",
         "z": "f2aa8b217634494c",
         "name": "Read speed history",
-        "filename": "./bicycle_data/speed_data.csv",
+        "filename": "D:/IOT_Genova_bicycle/Historical_data/speed_data.csv",
         "filenameType": "str",
         "format": "utf8",
         "chunk": false,
         "sendError": false,
         "encoding": "utf8",
         "allProps": false,
-        "x": 430,
-        "y": 940,
+        "x": 490,
+        "y": 920,
         "wires": [
             [
                 "014ccf60ab214bdb"
@@ -668,15 +592,15 @@
         "type": "file in",
         "z": "f2aa8b217634494c",
         "name": "Read battery history",
-        "filename": "./bicycle_data/battery_data.csv",
+        "filename": "D:/IOT_Genova_bicycle/Historical_data/battery_data.csv",
         "filenameType": "str",
         "format": "utf8",
         "chunk": false,
         "sendError": false,
         "encoding": "utf8",
         "allProps": false,
-        "x": 430,
-        "y": 1020,
+        "x": 490,
+        "y": 1000,
         "wires": [
             [
                 "47a4df7ada4044c8"
@@ -688,15 +612,15 @@
         "type": "file in",
         "z": "f2aa8b217634494c",
         "name": "Read GPS history",
-        "filename": "./bicycle_data/gps_data.csv",
+        "filename": "D:/IOT_Genova_bicycle/Historical_data/gps_data.csv",
         "filenameType": "str",
         "format": "utf8",
         "chunk": false,
         "sendError": false,
         "encoding": "utf8",
         "allProps": false,
-        "x": 430,
-        "y": 1100,
+        "x": 490,
+        "y": 1080,
         "wires": [
             [
                 "78f59afc68d84fbf"
@@ -708,15 +632,15 @@
         "type": "file in",
         "z": "f2aa8b217634494c",
         "name": "Read acceleration history",
-        "filename": "./bicycle_data/acceleration_data.csv",
+        "filename": "D:/IOT_Genova_bicycle/Historical_data/acceleration_data.csv",
         "filenameType": "str",
         "format": "utf8",
         "chunk": false,
         "sendError": false,
         "encoding": "utf8",
         "allProps": false,
-        "x": 430,
-        "y": 1180,
+        "x": 490,
+        "y": 1160,
         "wires": [
             [
                 "020e3002df214084"
@@ -728,15 +652,15 @@
         "type": "file in",
         "z": "f2aa8b217634494c",
         "name": "Read parking history",
-        "filename": "./bicycle_data/parking_data.csv",
+        "filename": "D:/IOT_Genova_bicycle/Historical_data/parking_data.csv",
         "filenameType": "str",
         "format": "utf8",
         "chunk": false,
         "sendError": false,
         "encoding": "utf8",
         "allProps": false,
-        "x": 430,
-        "y": 1260,
+        "x": 490,
+        "y": 1240,
         "wires": [
             [
                 "d6b9bba3212941e8"
@@ -748,15 +672,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Parse speed CSV",
-        "func": "\nvar text=String(msg.payload||\"\").trim();\nif(!text){msg.payload=[];return msg;}\nvar lines=text.split(/\\r?\\n/), cols=[\"timestamp\", \"bike\", \"speed\"], nums=[\"speed\"];\nvar selected=global.get(\"selectedBike\")||\"all\", out=[];\nfor(var i=0;i<lines.length;i++){\n var v=lines[i].split(\",\");\n if(v[0]===\"timestamp\" || v.length<cols.length) continue;\n var o={};\n cols.forEach(function(c,j){o[c]=nums.indexOf(c)>=0?Number(v[j]):v[j];});\n if(selected===\"all\"||o.bike===selected) out.push(o);\n}\nmsg.payload=out; return msg;\n",
+        "func": "var text = String(msg.payload || \"\").trim();\n\nif (!text) {\n    msg.payload = [];\n    return msg;\n}\n\nvar lines = text.split(/\\r?\\n/);\n\nvar cols = [\n    \"timestamp\",\n    \"bike\",\n    \"speed\"\n];\n\nvar nums = [\n    \"speed\"\n];\n\nvar selected = global.get(\"selectedBike\") || \"all\";\nvar out = [];\n\nfor (var i = 0; i < lines.length; i++) {\n\n    var v = lines[i].split(\",\");\n\n    if (v[0] === \"timestamp\" || v.length < cols.length) {\n        continue;\n    }\n\n    var o = {};\n\n    cols.forEach(function (c, j) {\n        o[c] = nums.indexOf(c) >= 0 ? Number(v[j]) : v[j];\n    });\n\n    if (selected === \"all\" || o.bike === selected) {\n        out.push(o);\n    }\n}\n\nmsg.payload = out;\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 690,
-        "y": 940,
+        "x": 750,
+        "y": 920,
         "wires": [
             [
                 "7cfe638d5c9e464b",
@@ -769,15 +693,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Parse battery CSV",
-        "func": "\nvar text=String(msg.payload||\"\").trim();\nif(!text){msg.payload=[];return msg;}\nvar lines=text.split(/\\r?\\n/), cols=[\"timestamp\", \"bike\", \"battery\"], nums=[\"battery\"];\nvar selected=global.get(\"selectedBike\")||\"all\", out=[];\nfor(var i=0;i<lines.length;i++){\n var v=lines[i].split(\",\");\n if(v[0]===\"timestamp\" || v.length<cols.length) continue;\n var o={};\n cols.forEach(function(c,j){o[c]=nums.indexOf(c)>=0?Number(v[j]):v[j];});\n if(selected===\"all\"||o.bike===selected) out.push(o);\n}\nmsg.payload=out; return msg;\n",
+        "func": "var text = String(msg.payload || \"\").trim();\n\nif (!text) {\n    msg.payload = [];\n    return msg;\n}\n\nvar lines = text.split(/\\r?\\n/);\n\nvar cols = [\n    \"timestamp\",\n    \"bike\",\n    \"battery\"\n];\n\nvar nums = [\n    \"battery\"\n];\n\nvar selected = global.get(\"selectedBike\") || \"all\";\nvar out = [];\n\nfor (var i = 0; i < lines.length; i++) {\n\n    var v = lines[i].split(\",\");\n\n    if (v[0] === \"timestamp\" || v.length < cols.length) {\n        continue;\n    }\n\n    var o = {};\n\n    cols.forEach(function (c, j) {\n        o[c] = nums.indexOf(c) >= 0 ? Number(v[j]) : v[j];\n    });\n\n    if (selected === \"all\" || o.bike === selected) {\n        out.push(o);\n    }\n}\n\nmsg.payload = out;\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 690,
-        "y": 1020,
+        "x": 750,
+        "y": 1000,
         "wires": [
             [
                 "6917b5fc90684ade",
@@ -790,15 +714,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Parse GPS CSV",
-        "func": "\nvar text=String(msg.payload||\"\").trim();\nif(!text){msg.payload=[];return msg;}\nvar lines=text.split(/\\r?\\n/), cols=[\"timestamp\", \"bike\", \"latitude\", \"longitude\", \"altitude\", \"gnss_quality\", \"satellites\", \"hdop\"], nums=[\"latitude\", \"longitude\", \"altitude\", \"satellites\", \"hdop\"];\nvar selected=global.get(\"selectedBike\")||\"all\", out=[];\nfor(var i=0;i<lines.length;i++){\n var v=lines[i].split(\",\");\n if(v[0]===\"timestamp\" || v.length<cols.length) continue;\n var o={};\n cols.forEach(function(c,j){o[c]=nums.indexOf(c)>=0?Number(v[j]):v[j];});\n if(selected===\"all\"||o.bike===selected) out.push(o);\n}\nmsg.payload=out; return msg;\n",
+        "func": "var text = String(msg.payload || \"\").trim();\n\nif (!text) {\n    msg.payload = [];\n    return msg;\n}\n\nvar lines = text.split(/\\r?\\n/);\n\nvar cols = [\n    \"timestamp\",\n    \"bike\",\n    \"latitude\",\n    \"longitude\",\n    \"altitude\",\n    \"gnss_quality\",\n    \"satellites\",\n    \"hdop\"\n];\n\nvar nums = [\n    \"latitude\",\n    \"longitude\",\n    \"altitude\",\n    \"satellites\",\n    \"hdop\"\n];\n\nvar selected = global.get(\"selectedBike\") || \"all\";\nvar out = [];\n\nfor (var i = 0; i < lines.length; i++) {\n\n    var v = lines[i].split(\",\");\n\n    if (v[0] === \"timestamp\" || v.length < cols.length) {\n        continue;\n    }\n\n    var o = {};\n\n    cols.forEach(function (c, j) {\n        o[c] = nums.indexOf(c) >= 0 ? Number(v[j]) : v[j];\n    });\n\n    if (selected === \"all\" || o.bike === selected) {\n        out.push(o);\n    }\n}\n\nmsg.payload = out;\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 690,
-        "y": 1100,
+        "x": 750,
+        "y": 1080,
         "wires": [
             [
                 "881ea9b963a047b3"
@@ -810,15 +734,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Parse acceleration CSV",
-        "func": "\nvar text=String(msg.payload||\"\").trim();\nif(!text){msg.payload=[];return msg;}\nvar lines=text.split(/\\r?\\n/), cols=[\"timestamp\", \"bike\", \"x\", \"y\", \"z\", \"vibration\", \"tilt_angle\"], nums=[\"x\", \"y\", \"z\", \"vibration\", \"tilt_angle\"];\nvar selected=global.get(\"selectedBike\")||\"all\", out=[];\nfor(var i=0;i<lines.length;i++){\n var v=lines[i].split(\",\");\n if(v[0]===\"timestamp\" || v.length<cols.length) continue;\n var o={};\n cols.forEach(function(c,j){o[c]=nums.indexOf(c)>=0?Number(v[j]):v[j];});\n if(selected===\"all\"||o.bike===selected) out.push(o);\n}\nmsg.payload=out; return msg;\n",
+        "func": "var text = String(msg.payload || \"\").trim();\n\nif (!text) {\n    msg.payload = [];\n    return msg;\n}\n\nvar lines = text.split(/\\r?\\n/);\n\nvar cols = [\n    \"timestamp\",\n    \"bike\",\n    \"x\",\n    \"y\",\n    \"z\",\n    \"vibration\",\n    \"tilt_angle\"\n];\n\nvar nums = [\n    \"x\",\n    \"y\",\n    \"z\",\n    \"vibration\",\n    \"tilt_angle\"\n];\n\nvar selected = global.get(\"selectedBike\") || \"all\";\nvar out = [];\n\nfor (var i = 0; i < lines.length; i++) {\n\n    var v = lines[i].split(\",\");\n\n    if (v[0] === \"timestamp\" || v.length < cols.length) {\n        continue;\n    }\n\n    var o = {};\n\n    cols.forEach(function (c, j) {\n        o[c] = nums.indexOf(c) >= 0 ? Number(v[j]) : v[j];\n    });\n\n    if (selected === \"all\" || o.bike === selected) {\n        out.push(o);\n    }\n}\n\nmsg.payload = out;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 710,
-        "y": 1180,
+        "x": 770,
+        "y": 1160,
         "wires": [
             [
                 "5cec6d913ced4053"
@@ -830,15 +754,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Parse parking CSV",
-        "func": "\nvar text=String(msg.payload||\"\").trim();\nif(!text){msg.payload=[];return msg;}\nvar lines=text.split(/\\r?\\n/), cols=[\"timestamp\", \"bike\", \"status\", \"locked\"], nums=[];\nvar selected=global.get(\"selectedBike\")||\"all\", out=[];\nfor(var i=0;i<lines.length;i++){\n var v=lines[i].split(\",\");\n if(v[0]===\"timestamp\" || v.length<cols.length) continue;\n var o={};\n cols.forEach(function(c,j){o[c]=nums.indexOf(c)>=0?Number(v[j]):v[j];});\n if(selected===\"all\"||o.bike===selected) out.push(o);\n}\nmsg.payload=out; return msg;\n",
+        "func": "var text = String(msg.payload || \"\").trim();\n\nif (!text) {\n    msg.payload = [];\n    return msg;\n}\n\nvar lines = text.split(/\\r?\\n/);\n\nvar cols = [\n    \"timestamp\",\n    \"bike\",\n    \"status\",\n    \"locked\"\n];\n\nvar nums = [];\n\nvar selected = global.get(\"selectedBike\") || \"all\";\nvar out = [];\n\nfor (var i = 0; i < lines.length; i++) {\n\n    var v = lines[i].split(\",\");\n\n    if (v[0] === \"timestamp\" || v.length < cols.length) {\n        continue;\n    }\n\n    var o = {};\n\n    cols.forEach(function (c, j) {\n        o[c] = nums.indexOf(c) >= 0 ? Number(v[j]) : v[j];\n    });\n\n    if (selected === \"all\" || o.bike === selected) {\n        out.push(o);\n    }\n}\n\nmsg.payload = out;\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
-        "y": 1260,
+        "x": 760,
+        "y": 1240,
         "wires": [
             [
                 "e07ff48325fe41e2"
@@ -850,15 +774,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Speed statistics",
-        "func": "\nvar a=msg.payload||[],v=a.map(x=>Number(x.speed)).filter(Number.isFinite);\nif(!v.length){msg.payload={average:\"N/A\",maximum:\"N/A\",minimum:\"N/A\",samples:0,tripDuration:\"N/A\"};return msg;}\nvar avg=v.reduce((x,y)=>x+y,0)/v.length;\nvar duration=a.length>1?(new Date(a[a.length-1].timestamp)-new Date(a[0].timestamp))/60000:0;\nmsg.payload={average:avg.toFixed(2),maximum:Math.max(...v).toFixed(2),minimum:Math.min(...v).toFixed(2),samples:v.length,tripDuration:duration.toFixed(1)};\nreturn msg;\n",
+        "func": "var a = msg.payload || [];\n\nif (!Array.isArray(a)) {\n    msg.payload = {\n        average: \"N/A\",\n        maximum: \"N/A\",\n        minimum: \"N/A\",\n        samples: 0,\n        tripDuration: \"N/A\",\n        error: \"msg.payload is not an array\"\n    };\n\n    return msg;\n}\n\nvar values = [];\n\nfor (var i = 0; i < a.length; i++) {\n    var speed = Number(a[i].speed);\n\n    if (isFinite(speed)) {\n        values.push(speed);\n    }\n}\n\nif (values.length === 0) {\n    msg.payload = {\n        average: \"N/A\",\n        maximum: \"N/A\",\n        minimum: \"N/A\",\n        samples: 0,\n        tripDuration: \"N/A\"\n    };\n\n    return msg;\n}\n\nvar total = 0;\n\nfor (var j = 0; j < values.length; j++) {\n    total += values[j];\n}\n\nvar average = total / values.length;\nvar maximum = Math.max.apply(null, values);\nvar minimum = Math.min.apply(null, values);\n\nvar duration = 0;\n\nif (a.length > 1) {\n    var firstTime = new Date(a[0].timestamp).getTime();\n    var lastTime = new Date(a[a.length - 1].timestamp).getTime();\n\n    if (!isNaN(firstTime) && !isNaN(lastTime)) {\n        duration = (lastTime - firstTime) / 60000;\n    }\n}\n\nmsg.payload = {\n    average: average.toFixed(2),\n    maximum: maximum.toFixed(2),\n    minimum: minimum.toFixed(2),\n    samples: values.length,\n    tripDuration: duration.toFixed(1)\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1080,
-        "y": 960,
+        "x": 1140,
+        "y": 940,
         "wires": [
             [
                 "5610d34fdbd54402"
@@ -870,15 +794,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Battery statistics",
-        "func": "\nvar a=msg.payload||[],v=a.map(x=>Number(x.battery)).filter(Number.isFinite);\nif(!v.length){msg.payload={average:\"N/A\",minimum:\"N/A\",maximum:\"N/A\",lowEvents:0};return msg;}\nmsg.payload={average:(v.reduce((x,y)=>x+y,0)/v.length).toFixed(1),minimum:Math.min(...v).toFixed(1),maximum:Math.max(...v).toFixed(1),lowEvents:v.filter(x=>x<=20).length};\nreturn msg;\n",
+        "func": "var a = msg.payload || [];\n\nvar v = a\n    .map(x => Number(x.battery))\n    .filter(Number.isFinite);\n\nif (!v.length) {\n    msg.payload = {\n        average: \"N/A\",\n        minimum: \"N/A\",\n        maximum: \"N/A\",\n        lowEvents: 0\n    };\n\n    return msg;\n}\n\nmsg.payload = {\n    average: (\n        v.reduce((x, y) => x + y, 0) / v.length\n    ).toFixed(1),\n\n    minimum: Math.min(...v).toFixed(1),\n\n    maximum: Math.max(...v).toFixed(1),\n\n    lowEvents: v.filter(x => x <= 20).length\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1080,
-        "y": 1040,
+        "x": 1140,
+        "y": 1020,
         "wires": [
             [
                 "adfdbb58af1d44db"
@@ -890,15 +814,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Route and distance statistics",
-        "func": "\nvar a=msg.payload||[];\nfunction r(v){return v*Math.PI/180;} function h(a,b,c,d){var R=6371000,x=r(c-a),y=r(d-b),q=Math.sin(x/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q));}\nvar groups={},total=0;\na.forEach(x=>(groups[x.bike]=groups[x.bike]||[]).push(x));\nObject.keys(groups).forEach(function(k){var g=groups[k];for(var i=1;i<g.length;i++){var d=h(g[i-1].latitude,g[i-1].longitude,g[i].latitude,g[i].longitude);if(d<1000)total+=d;}});\nmsg.payload={distanceKm:(total/1000).toFixed(2),points:a.length,bicycles:Object.keys(groups).length,averageAltitude:a.length?(a.reduce((s,x)=>s+Number(x.altitude||0),0)/a.length).toFixed(1):\"N/A\"};\nreturn msg;\n",
+        "func": "var a = msg.payload || [];\n\nfunction r(v) {\n    return v * Math.PI / 180;\n}\n\nfunction h(a, b, c, d) {\n    var R = 6371000;\n\n    var x = r(c - a);\n    var y = r(d - b);\n\n    var q =\n        Math.sin(x / 2) ** 2 +\n        Math.cos(r(a)) *\n        Math.cos(r(c)) *\n        Math.sin(y / 2) ** 2;\n\n    return R * 2 * Math.atan2(Math.sqrt(q), Math.sqrt(1 - q));\n}\n\nvar groups = {};\nvar total = 0;\n\na.forEach(function (x) {\n    (groups[x.bike] = groups[x.bike] || []).push(x);\n});\n\nObject.keys(groups).forEach(function (k) {\n    var g = groups[k];\n\n    for (var i = 1; i < g.length; i++) {\n        var d = h(\n            g[i - 1].latitude,\n            g[i - 1].longitude,\n            g[i].latitude,\n            g[i].longitude\n        );\n\n        if (d < 1000) {\n            total += d;\n        }\n    }\n});\n\nmsg.payload = {\n    distanceKm: (total / 1000).toFixed(2),\n    points: a.length,\n    bicycles: Object.keys(groups).length,\n    averageAltitude: a.length\n        ? (\n            a.reduce(function (s, x) {\n                return s + Number(x.altitude || 0);\n            }, 0) / a.length\n        ).toFixed(1)\n        : \"N/A\"\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1120,
-        "y": 1120,
+        "x": 1180,
+        "y": 1100,
         "wires": [
             [
                 "fb7f3a8963cc447e"
@@ -910,15 +834,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Motion event statistics",
-        "func": "\nvar a=msg.payload||[],m=a.map(x=>Math.sqrt(x.x*x.x+x.y*x.y+x.z*x.z)).filter(Number.isFinite);\nif(!m.length){msg.payload={average:\"N/A\",maximum:\"N/A\",harshAcceleration:0,harshBraking:0,fallEvents:0};return msg;}\nmsg.payload={average:(m.reduce((x,y)=>x+y,0)/m.length).toFixed(2),maximum:Math.max(...m).toFixed(2),harshAcceleration:a.filter(x=>x.x>=2.5).length,harshBraking:a.filter(x=>x.x<=-2.5).length,fallEvents:a.filter(x=>x.tilt_angle>60).length};\nreturn msg;\n",
+        "func": "var a = msg.payload || [];\n\nvar m = a\n    .map(x => Math.sqrt(x.x * x.x + x.y * x.y + x.z * x.z))\n    .filter(Number.isFinite);\n\nif (!m.length) {\n    msg.payload = {\n        average: \"N/A\",\n        maximum: \"N/A\",\n        harshAcceleration: 0,\n        harshBraking: 0,\n        fallEvents: 0\n    };\n\n    return msg;\n}\n\nmsg.payload = {\n    average: (\n        m.reduce((x, y) => x + y, 0) / m.length\n    ).toFixed(2),\n\n    maximum: Math.max(...m).toFixed(2),\n\n    harshAcceleration: a.filter(x => x.x >= 2.5).length,\n\n    harshBraking: a.filter(x => x.x <= -2.5).length,\n\n    fallEvents: a.filter(x => x.tilt_angle > 60).length\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1100,
-        "y": 1200,
+        "x": 1160,
+        "y": 1180,
         "wires": [
             [
                 "bcf9bf698df64ecf"
@@ -930,15 +854,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Parking statistics",
-        "func": "\nvar a=msg.payload||[],parked=a.filter(x=>String(x.status).toLowerCase()===\"parked\");\nvar byBike={}; parked.forEach(x=>byBike[x.bike]=(byBike[x.bike]||0)+1);\nvar most=Object.keys(byBike).sort((x,y)=>byBike[y]-byBike[x])[0]||\"N/A\";\nmsg.payload={parkingRecords:parked.length,totalRecords:a.length,lockedRecords:a.filter(x=>String(x.locked)===\"true\").length,mostParkedBike:most};\nreturn msg;\n",
+        "func": "var a = msg.payload || [];\n\nvar parked = a.filter(function (x) {\n    return String(x.status).toLowerCase() === \"parked\";\n});\n\nvar byBike = {};\n\nparked.forEach(function (x) {\n    byBike[x.bike] = (byBike[x.bike] || 0) + 1;\n});\n\nvar most = Object.keys(byBike)\n    .sort(function (x, y) {\n        return byBike[y] - byBike[x];\n    })[0] || \"N/A\";\n\nmsg.payload = {\n    parkingRecords: parked.length,\n    totalRecords: a.length,\n    lockedRecords: a.filter(function (x) {\n        return String(x.locked) === \"true\";\n    }).length,\n    mostParkedBike: most\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1080,
-        "y": 1280,
+        "x": 1140,
+        "y": 1260,
         "wires": [
             [
                 "aa1bd3d4334a45eb"
@@ -960,8 +884,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 1400,
-        "y": 960,
+        "x": 1460,
+        "y": 940,
         "wires": [
             []
         ]
@@ -981,8 +905,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 1390,
-        "y": 1040,
+        "x": 1450,
+        "y": 1020,
         "wires": [
             []
         ]
@@ -1002,8 +926,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 1400,
-        "y": 1120,
+        "x": 1460,
+        "y": 1100,
         "wires": [
             []
         ]
@@ -1023,8 +947,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 1400,
-        "y": 1200,
+        "x": 1460,
+        "y": 1180,
         "wires": [
             []
         ]
@@ -1044,8 +968,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 1390,
-        "y": 1280,
+        "x": 1450,
+        "y": 1260,
         "wires": [
             []
         ]
@@ -1055,15 +979,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Prepare speed chart",
-        "func": "msg.field=\"speed\";msg.title=\"Speed\";\n\nvar a=msg.payload||[], field=msg.field || \"speed\", title=msg.title || field;\nvar pts=a.map(x=>({x:new Date(x.timestamp),y:Number(x[field])})).filter(p=>Number.isFinite(p.y));\nmsg.payload=[{series:[title],data:[pts],labels:[\"\"]}]; return msg;\n",
+        "func": "msg.field = \"speed\";\nmsg.title = \"Speed\";\n\nvar a = msg.payload || [];\nvar field = msg.field || \"speed\";\nvar title = msg.title || field;\n\nvar pts = a\n    .map(x => ({\n        x: new Date(x.timestamp),\n        y: Number(x[field])\n    }))\n    .filter(p => Number.isFinite(p.y));\n\nmsg.payload = [\n    {\n        series: [title],\n        data: [pts],\n        labels: [\"\"]\n    }\n];\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1100,
-        "y": 840,
+        "x": 1160,
+        "y": 820,
         "wires": [
             [
                 "6ca19942e69f447b"
@@ -1075,15 +999,15 @@
         "type": "function",
         "z": "f2aa8b217634494c",
         "name": "Prepare battery chart",
-        "func": "msg.field=\"battery\";msg.title=\"Battery\";\n\nvar a=msg.payload||[], field=msg.field || \"speed\", title=msg.title || field;\nvar pts=a.map(x=>({x:new Date(x.timestamp),y:Number(x[field])})).filter(p=>Number.isFinite(p.y));\nmsg.payload=[{series:[title],data:[pts],labels:[\"\"]}]; return msg;\n",
+        "func": "msg.field = \"battery\";\nmsg.title = \"Battery\";\n\nvar a = msg.payload || [];\nvar field = msg.field || \"speed\";\nvar title = msg.title || field;\n\nvar pts = a\n    .map(x => ({\n        x: new Date(x.timestamp),\n        y: Number(x[field])\n    }))\n    .filter(p => Number.isFinite(p.y));\n\nmsg.payload = [\n    {\n        series: [title],\n        data: [pts],\n        labels: [\"\"]\n    }\n];\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1100,
-        "y": 900,
+        "x": 1160,
+        "y": 880,
         "wires": [
             [
                 "2ad37c8092fd4afc"
@@ -1117,13 +1041,19 @@
         "colors": [
             "#1f77b4",
             "#aec7e8",
-            "#ff7f0e"
+            "#ff7f0e",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000"
         ],
         "outputs": 1,
         "useDifferentColor": false,
         "className": "",
-        "x": 1420,
-        "y": 840,
+        "x": 1480,
+        "y": 820,
         "wires": [
             []
         ]
@@ -1160,8 +1090,8 @@
         "outputs": 1,
         "useDifferentColor": false,
         "className": "",
-        "x": 1430,
-        "y": 900,
+        "x": 1490,
+        "y": 880,
         "wires": [
             []
         ]
@@ -1175,20 +1105,96 @@
         "order": 8,
         "width": 24,
         "height": 2,
-        "format": "<div><b>Historical database prototype:</b> CSV files are stored in <code>./bicycle_data/</code>. Use the Inject node named <i>Refresh historical analytics</i> to process them immediately during the demo.</div>",
+        "format": "<div><b>Historical database prototype:</b> CSV files are stored in <code> current folder inside ./Historical_data/</code>. Use the Inject node named <i>Refresh historical analytics</i> to process them immediately during the demo.</div>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 1690,
-        "y": 1060,
+        "x": 1750,
+        "y": 1040,
         "wires": [
             []
         ]
     },
     {
-        "id": "a03404e35a1f59d4",
+        "id": "8f8a663d04fc44e8",
+        "type": "ui_group",
+        "name": "Live Bicycle Data",
+        "tab": "2cc61340aadf433e",
+        "order": 1,
+        "disp": true,
+        "width": "24",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "0fe71facd770409c",
+        "type": "mqtt-broker",
+        "name": "Local Mosquitto",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true
+    },
+    {
+        "id": "0ff8acf7a37e40a1",
+        "type": "ui_group",
+        "name": "Device Status",
+        "tab": "2cc61340aadf433e",
+        "order": 2,
+        "disp": true,
+        "width": "24",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "48b54734aec64996",
+        "type": "ui_group",
+        "name": "Events and Alarms",
+        "tab": "2cc61340aadf433e",
+        "order": 3,
+        "disp": true,
+        "width": "24",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "46b268098d2d4151",
+        "type": "ui_group",
+        "name": "Historical Mobility Analytics",
+        "tab": "cf64f95943c64109",
+        "order": 1,
+        "disp": true,
+        "width": "24",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "2cc61340aadf433e",
+        "type": "ui_tab",
+        "name": "Live Monitoring",
+        "icon": "directions_bike",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "cf64f95943c64109",
+        "type": "ui_tab",
+        "name": "Historical Analytics",
+        "icon": "timeline",
+        "order": 2,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "d49683149fd2e6b3",
         "type": "global-config",
         "env": [],
         "modules": {

@@ -1,0 +1,33 @@
+var a = msg.payload || [];
+
+var m = a
+    .map(x => Math.sqrt(x.x * x.x + x.y * x.y + x.z * x.z))
+    .filter(Number.isFinite);
+
+if (!m.length) {
+    msg.payload = {
+        average: "N/A",
+        maximum: "N/A",
+        harshAcceleration: 0,
+        harshBraking: 0,
+        fallEvents: 0
+    };
+
+    return msg;
+}
+
+msg.payload = {
+    average: (
+        m.reduce((x, y) => x + y, 0) / m.length
+    ).toFixed(2),
+
+    maximum: Math.max(...m).toFixed(2),
+
+    harshAcceleration: a.filter(x => x.x >= 2.5).length,
+
+    harshBraking: a.filter(x => x.x <= -2.5).length,
+
+    fallEvents: a.filter(x => x.tilt_angle > 60).length
+};
+
+return msg;
