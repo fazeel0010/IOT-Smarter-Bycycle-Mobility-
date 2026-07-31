@@ -1,0 +1,27 @@
+var a = msg.payload || [];
+
+var parked = a.filter(function (x) {
+    return String(x.status).toLowerCase() === "parked";
+});
+
+var byBike = {};
+
+parked.forEach(function (x) {
+    byBike[x.bike] = (byBike[x.bike] || 0) + 1;
+});
+
+var most = Object.keys(byBike)
+    .sort(function (x, y) {
+        return byBike[y] - byBike[x];
+    })[0] || "N/A";
+
+msg.payload = {
+    parkingRecords: parked.length,
+    totalRecords: a.length,
+    lockedRecords: a.filter(function (x) {
+        return String(x.locked) === "true";
+    }).length,
+    mostParkedBike: most
+};
+
+return msg;

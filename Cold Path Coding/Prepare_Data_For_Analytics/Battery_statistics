@@ -1,0 +1,30 @@
+var a = msg.payload || [];
+
+var v = a
+    .map(x => Number(x.battery))
+    .filter(Number.isFinite);
+
+if (!v.length) {
+    msg.payload = {
+        average: "N/A",
+        minimum: "N/A",
+        maximum: "N/A",
+        lowEvents: 0
+    };
+
+    return msg;
+}
+
+msg.payload = {
+    average: (
+        v.reduce((x, y) => x + y, 0) / v.length
+    ).toFixed(1),
+
+    minimum: Math.min(...v).toFixed(1),
+
+    maximum: Math.max(...v).toFixed(1),
+
+    lowEvents: v.filter(x => x <= 20).length
+};
+
+return msg;
